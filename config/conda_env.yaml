@@ -1,0 +1,24 @@
+name: kl
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.6  # Need < 3.7 because of boost building for opencv
+  - pyyaml
+  - tqdm
+  - matplotlib
+  - ipython
+  # - opencv
+  - gpustat
+  - scikit-learn
+  - seaborn
+  - pytorch=1.6.0
+  - torchvision=0.7.0
+  - pip
+  - pip:
+    - catkin_tools
+    - torchsummary
+    # - dm_control   # Only for testing PlaNet, can remove if not using anymore
+    - empy         # Needed to build ROS msgs in catkin
+    - rospkg       # Needed to run ROS scripts
+    - dataclasses  # Needed for python3.6, will be included in python3.7
