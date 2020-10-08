@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="rviz_config" default="$(find kl_planning)/config/nav_2d_env.rviz"/>
+
+  <!-- ===================================================================================== -->
+  
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(arg rviz_config)"/>
+
+</launch>
