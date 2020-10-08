@@ -1,0 +1,21 @@
+objects:
+  north_wall:
+    type: cube
+    length: 1
+    width: 0.1
+    height: 0.1
+    position:
+      - 0
+      - 0
+      - 0
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 1
+      - 0
+      - 0
+      - 1

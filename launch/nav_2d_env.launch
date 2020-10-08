@@ -1,10 +1,18 @@
 <?xml version="1.0"?>
 <launch>
 
-  <arg name="rviz_config" default="$(find kl_planning)/config/nav_2d_env.rviz"/>
+  <arg name="scene_config" default="$(find kl_planning)/config/scenes/nav_2d_env.yaml"/>
+  <arg name="rviz_config"  default="$(find kl_planning)/config/rviz/nav_2d_env.rviz"/>
 
   <!-- ===================================================================================== -->
   
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(arg rviz_config)"/>
+
+  <node name="create_scene" pkg="kl_planning" type="create_scene.py" output="screen">
+    <param name="config_filename" value="$(arg scene_config)"/>
+  </node>
+
+  <node name="world_frame_publisher" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 map world 100" />
 
 </launch>

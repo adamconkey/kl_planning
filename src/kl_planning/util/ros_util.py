@@ -10,16 +10,18 @@ def get_marker_array_msg(objects):
     for i, (obj_id, obj_data) in enumerate(objects.items()):
         marker = Marker()
         marker.id = i
-        marker.type = obj_data['type']
+        # TODO add other options and error check
+        if obj_data['type'] == 'cube':
+            marker.type = Marker.CUBE
         marker.action = Marker.MODIFY
-        marker.pose.position.x = obj_data['position'][idx][0]
-        marker.pose.position.y = obj_data['position'][idx][1]
-        marker.pose.position.z = obj_data['position'][idx][2]
-        marker.pose.orientation.x = obj_data['orientation'][idx][0]
-        marker.pose.orientation.y = obj_data['orientation'][idx][1]
-        marker.pose.orientation.z = obj_data['orientation'][idx][2]
-        marker.pose.orientation.w = obj_data['orientation'][idx][3]
-        marker.header.frame_id = obj_dta['parent_frame']
+        marker.pose.position.x = obj_data['position'][0]
+        marker.pose.position.y = obj_data['position'][1]
+        marker.pose.position.z = obj_data['position'][2]
+        marker.pose.orientation.x = obj_data['orientation'][0]
+        marker.pose.orientation.y = obj_data['orientation'][1]
+        marker.pose.orientation.z = obj_data['orientation'][2]
+        marker.pose.orientation.w = obj_data['orientation'][3]
+        marker.header.frame_id = obj_data['parent_frame']
         marker.scale.x = obj_data['length']
         marker.scale.y = obj_data['width']
         marker.scale.z = obj_data['height']
