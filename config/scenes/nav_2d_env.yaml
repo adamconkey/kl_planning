@@ -99,4 +99,44 @@ objects:
       - 0
       - 1
       - 1
-  
+indicators:
+  start:
+    type: cylinder
+    length: 0.25
+    width: 0.25
+    height: 0
+    position:
+      - -1.5
+      - 1.5
+      - 0
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 1
+      - 1
+      - 0
+      - 1
+  goal:
+    type: cylinder
+    length: 0.25
+    width: 0.25
+    height: 0
+    position:
+      - 1.5
+      - -1.5
+      - 0
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 1
+      - 0
+      - 1
