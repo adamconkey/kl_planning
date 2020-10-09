@@ -1,4 +1,14 @@
+import cv2
+from cv_bridge import CvBridge
+
 from visualization_msgs.msg import Marker, MarkerArray
+
+
+
+def rgb_to_msg(rgb_array):
+    rgb_img = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
+    rgb_msg = CvBridge().cv2_to_imgmsg(rgb_img)
+    return rgb_msg
 
 
 def get_marker_msg(obj_data, marker_id=0):

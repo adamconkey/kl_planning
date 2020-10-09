@@ -76,7 +76,7 @@ class Planner:
         n = mu.size(-1)
         _lambda = alpha**2 * (n + kappa) - n
     
-        Q = torch.diag_embed(torch.rand(B, n), dim1=-2, dim2=-1) * 0.2
+        Q = torch.diag_embed(torch.rand(B, n), dim1=-2, dim2=-1) * 0.02
     
         w_m = torch.full((B, 2*n + 1, 1), 1. / (2 * (n + _lambda)))
         w_c = torch.full((B, 2*n + 1, 1, 1), 1. / (2 * (n + _lambda)))

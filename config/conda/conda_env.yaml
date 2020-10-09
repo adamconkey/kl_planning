@@ -4,11 +4,12 @@ channels:
   - pytorch
 dependencies:
   - python=3.6  # Need < 3.7 because of boost building for opencv
+  - qt=5.9.5    # Version needed to build rviz_textured_quads
   - pyyaml
   - tqdm
   - matplotlib
   - ipython
-  # - opencv
+  - opencv
   - gpustat
   - scikit-learn
   - seaborn
@@ -18,7 +19,6 @@ dependencies:
   - pip:
     - catkin_tools
     - torchsummary
-    # - dm_control   # Only for testing PlaNet, can remove if not using anymore
     - empy         # Needed to build ROS msgs in catkin
     - rospkg       # Needed to run ROS scripts
     - dataclasses  # Needed for python3.6, will be included in python3.7
