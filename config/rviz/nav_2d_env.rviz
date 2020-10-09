@@ -63,8 +63,16 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /start
+      Marker Topic: /start_goal
       Name: Start/Goal
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /agent
+      Name: Agent
       Namespaces:
         "": true
       Queue Size: 100
@@ -111,25 +119,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 6.64420223236084
+      Distance: 5.815306663513184
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: -0.4088559150695801
+        Y: 0.2304946929216385
+        Z: 0.20368599891662598
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5497963428497314
+      Pitch: 1.5647963285446167
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.713592529296875
+      Yaw: 4.708602428436279
     Saved: ~
 Window Geometry:
   Displays:
