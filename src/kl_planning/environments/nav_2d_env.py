@@ -53,7 +53,8 @@ class Navigation2DEnvironment:
 
     def in_collision(self, q):
         """
-        Test collision for a specified robot configuration q (from MP class)
+        Based on separating axis theorem code here: 
+            https://hackmd.io/@US4ofdv7Sq2GRdxti381_A/ryFmIZrsl
         """
         robot_pts = self.fk(q)
         robot_edges = self._edges_of(robot_pts)
@@ -97,24 +98,6 @@ class Navigation2DEnvironment:
             min2 = min(min2, projection)
             max2 = max(max2, projection)    
         return max1 < min2 or max2 < min1
-        
-        # links = []
-        # prev_pt = pts[0]
-        # for pt in pts[1:]:
-        #     links.append((prev_pt, pt))
-        #     prev_pt = pt[:]
-
-        # # Test collision with all polygons
-        # for polygon in self.polygons:
-        #     for link in links:
-        #         if self._point_in_polygon(link[1], polygon):
-        #             return True
-        #         for i in range(len(polygon)):
-        #             prev_pt = polygon[i-1]
-        #             pt = polygon[i]
-        #             if self._line_line_collision(link, (prev_pt, pt)):
-        #                 return True
-        # return False
 
     def cost(self, act, start_mu, start_sigma, goal_mu, goal_sigma):
         mus = [start_mu]
@@ -170,53 +153,3 @@ class Navigation2DEnvironment:
                 self.polygons.append(polygon)
             else:
                 print(f"Unknown object type for making collision object: {obj_data['type']}")    
-
-    def _line_line_collision(self, l1, l2, eps=0.0001):
-        """
-        Test collision between two line segments l1 and l2 (from MP class).
-        """
-        a1 = l1[0]
-        a2 = l1[1]
-        b1 = l2[0]
-        b2 = l2[1]
-
-        denom = (a1[0] - a2[0])*(b1[1]-b2[1]) - (a1[1]-a2[1])*(b1[0]-b2[0])
-        if denom == 0: # parallel lines
-            return False
-
-        # Get intersection point
-        x_i = ((a1[0]*a2[1] - a1[1]*a2[0])*(b1[0]-b2[0]) -
-               (a1[0] - a2[0])*(b1[0]*b2[1] - b1[1]*b2[0]))/denom
-        y_i = ((a1[0]*a2[1] - a1[1]*a2[0])*(b1[1]-b2[1]) -
-               (a1[1] - a2[1])*(b1[0]*b2[1] - b1[1]*b2[0]))/denom
-
-        # Test if intersection point between bounds
-        if x_i < min(a1[0], a2[0])-eps or x_i > max(a1[0], a2[0])+eps:
-            return False
-        if x_i < min(b1[0], b2[0])-eps or x_i > max(b1[0], b2[0])+eps:
-            return False
-        if y_i < min(a1[1], a2[1])-eps or y_i > max(a1[1], a2[1])+eps:
-            return False
-        if y_i < min(b1[1], b2[1])-eps or y_i > max(b1[1], b2[1])+eps:
-            return False
-        return True
-
-    def _point_in_polygon(self, pt, poly):
-        """
-        Determine if a point lies within a polygon (from MP class)
-        """
-        n = len(poly)
-        inside = False
-
-        p1 = poly[0]
-        for i in range(n+1):
-            p2 = poly[i % n]
-            if (pt[1] > min(p1[1],p2[1]) and pt[1] <= max(p1[1],p2[1]) and
-                pt[0] <= max(p1[0],p2[0])):
-                if p1[1] != p2[1]:
-                    x_cross = (pt[1] - p1[1])*(p2[0] - p1[0])/(p2[1]-p1[1])+p1[0]
-                if p1[0] == p2[0] or pt[0] <= x_cross:
-                    inside = not inside
-            p1 = p2
-
-        return inside
