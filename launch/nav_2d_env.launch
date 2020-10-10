@@ -3,6 +3,7 @@
 
   <arg name="scene_config" default="$(find kl_planning)/config/scenes/nav_2d_env.yaml"/>
   <arg name="rviz_config"  default="$(find kl_planning)/config/rviz/nav_2d_env.rviz"/>
+  <arg name="debug"        default="false"/>
 
   <!-- ===================================================================================== -->
   
@@ -18,5 +19,10 @@
         args="-0.05 -0.04 -0.01 3.14159 3.14159 0 world kl_img 100"/>
 
   <node name="rviz_display_img" pkg="kl_planning" type="display_rviz_imgs.py" output="screen"/>
+
+  <node name="visualize_trajectory_samples" pkg="kl_planning"
+        type="visualize_trajectory_samples.py" output="screen">
+    <param name="debug" value="$(arg debug)"/>
+  </node>
 
 </launch>

@@ -1,7 +1,10 @@
+import sys
 import torch
 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+
+from kl_planning.util import vis_util
 
 
 class Planner:
@@ -10,8 +13,8 @@ class Planner:
         pass
 
     def plan_cem(self, start_mu, start_sigma, goal_mu, goal_sigma, cost_func,
-                 min_act, max_act, horizon=10, n_iters=20, n_candidates=100,
-                 n_elite=10, visualize=False, action_size=2):
+                 min_act, max_act, horizon=10, n_iters=20, n_candidates=1000,
+                 n_elite=100, visualize=False, action_size=2):
     
         start_mu = start_mu.repeat(n_candidates, 1)
         start_sigma = start_sigma.repeat(n_candidates, 1, 1)
@@ -36,19 +39,18 @@ class Planner:
             worst_costs.append(topk_costs[-1].item())
             elite = act[:, topk_indices]
 
-            # TODO would like to send elite sequences and costs to a node that can visualize
-            # them, basically unroll the actions from the current location and get the paths
-            # and render as lines in rviz, preferably colored by cost
+            if visualize:
+                vis_util.visualize_trajectory_samples(elite, topk_costs)
             
             # Update belief with new means and standard deviations
             act_mu = elite.mean(dim=1, keepdim=True)
             act_sigma = elite.std(dim=1, unbiased=False, keepdim=True)
     
-        if visualize:
-            plt.title("Elite Costs")
-            plt.plot(best_costs, label='Best')
-            plt.plot(worst_costs, label='Worst')
-            plt.legend()
-            plt.show()
+        # if visualize:
+        #     plt.title("Elite Costs")
+        #     plt.plot(best_costs, label='Best')
+        #     plt.plot(worst_costs, label='Worst')
+        #     plt.legend()
+        #     plt.show()
     
         return act_mu.squeeze()

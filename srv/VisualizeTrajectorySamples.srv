@@ -1,0 +1,5 @@
+float64[] samples  # Flattened array of samples corresponding with shape
+int64[] shape      # Shape of sample array for deserialization
+float64[] costs    # Costs associated with samples
+---
+bool success

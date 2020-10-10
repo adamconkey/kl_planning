@@ -15,6 +15,7 @@ catkin_python_setup()
 add_service_files(
   FILES
   DisplayImage.srv
+  VisualizeTrajectorySamples.srv
 )
 
 generate_messages(
