@@ -6,7 +6,8 @@ import yaml
 import rospy
 from visualization_msgs.msg import MarkerArray
 
-from kl_planning.util import file_util, ros_util
+from kl_planning.environments import Navigation2DEnvironment
+from kl_planning.util import ros_util
 
 
 class SceneManager:
@@ -21,12 +22,10 @@ class SceneManager:
         self.start_goal_pub = rospy.Publisher("/start_goal", MarkerArray, queue_size=1)
         self.agent_pub = rospy.Publisher("/agent", MarkerArray, queue_size=1)
 
-    def create_scene(self, config_filename):
-        file_util.check_path_exists(config_filename, "Scene configuration file")
-        self.scene_config = file_util.load_yaml(config_filename)
-        self.scene_msg = ros_util.get_marker_array_msg(self.scene_config['objects'])
-        self.start_goal_msg = ros_util.get_marker_array_msg(self.scene_config['indicators'])
-        self.agent_msg = ros_util.get_marker_array_msg(self.scene_config['agents'])
+    def create_scene(self, env):
+        self.scene_msg = ros_util.get_marker_array_msg(env.object_config)
+        self.start_goal_msg = ros_util.get_marker_array_msg(env.indicator_config)
+        self.agent_msg = ros_util.get_marker_array_msg(env.agent_config)
                 
     def run(self):
         rospy.loginfo("Visualizing scene")
@@ -47,6 +46,7 @@ if __name__ == '__main__':
     rospy.init_node('create_scene')
     config_filename = rospy.get_param('~config_filename')
     manager = SceneManager()
+    env = Navigation2DEnvironment(config_filename)
     rospy.on_shutdown(manager.shutdown)
-    manager.create_scene(config_filename)
+    manager.create_scene(env)
     manager.run()

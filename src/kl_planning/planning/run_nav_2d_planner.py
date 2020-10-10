@@ -4,6 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
+import argparse
 import cv2
 from cv_bridge import CvBridge
 from scipy.stats import multivariate_normal
@@ -11,7 +12,7 @@ from math import pi
 
 from kl_planning.planning import Planner
 from kl_planning.environments import Navigation2DEnvironment
-from kl_planning.util import ros_util
+from kl_planning.util import ros_util, math_util
 from kl_planning.srv import DisplayImage, DisplayImageRequest
 
 
@@ -32,9 +33,12 @@ def plot(mus, sigmas):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config_filename', type=str, required=True)
+    args = parser.parse_args()
+    
     planner = Planner()
-    env = Navigation2DEnvironment()
-
+    env = Navigation2DEnvironment(args.config_filename)
     
     # TODO for now this is just hard-coding some stuff to get running, will want
     # to make this all configurable
@@ -46,10 +50,10 @@ if __name__ == '__main__':
     goal_sigma = torch.diag(torch.tensor([0.03, 0.03], dtype=torch.float32))
 
     min_act = torch.tensor([0, -pi])
-    max_act = torch.tensor([0.25, pi])
+    max_act = torch.tensor([0.5, pi])
     
     act_seq = planner.plan_cem(start_mu, start_sigma, goal_mu, goal_sigma,
-                               planner.cost, env.dynamics, min_act, max_act, visualize=False)
+                               env.cost, min_act, max_act, visualize=True)
 
     mus = [start_mu.unsqueeze(0)]
     sigmas = [start_sigma.unsqueeze(0)]
@@ -58,7 +62,7 @@ if __name__ == '__main__':
     
     for t in range(len(act_seq)):
         g = lambda x: env.dynamics(x, act_seq[t].unsqueeze(0))
-        mu_prime, sigma_prime = planner.unscented_transform(mus[-1], sigmas[-1], g)
+        mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[-1], sigmas[-1], g)
         mus.append(mu_prime)
         sigmas.append(sigma_prime)
     
