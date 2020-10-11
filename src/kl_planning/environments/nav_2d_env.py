@@ -1,11 +1,13 @@
 import sys
+import rospy
 import torch
 from torch.distributions import MultivariateNormal
 from torch.distributions.kl import kl_divergence
-
+from scipy.spatial.transform import Rotation as R
 import numpy as np
 
 from kl_planning.util import file_util, math_util
+from kl_planning.srv import SetPose, SetPoseRequest
 
 
 class Navigation2DEnvironment:
@@ -26,6 +28,22 @@ class Navigation2DEnvironment:
         self.p1 = self.p0 + np.array([L, 0])
         self.p2 = self.p1 + np.array([0, -W])
         self.p3 = self.p2 + np.array([-L, 0])
+
+    def set_agent_location(self, position, angle):
+        quat = R.from_euler('z', angle, degrees=False).as_quat()
+        req = SetPoseRequest()
+        req.pose.position.x = position[0]
+        req.pose.position.y = position[1]
+        req.pose.position.z = 0.01 # TODO hard-code
+        req.pose.orientation.x = quat[0]
+        req.pose.orientation.y = quat[1]
+        req.pose.orientation.z = quat[2]
+        req.pose.orientation.w = quat[3]
+        set_pose = rospy.ServiceProxy("/visualization/set_agent_location", SetPose)
+        try:
+            set_pose(req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Service call to set agent location failed: {e}")
         
     def dynamics(self, start_xy, act, repeat=True):
         """
@@ -34,11 +52,25 @@ class Navigation2DEnvironment:
         """
         delta_x = act[:,0] * torch.cos(act[:,1])
         delta_y = act[:,0] * torch.sin(act[:,1])
-        delta_xy = torch.stack([delta_x, delta_y], dim=-1).unsqueeze(1)
+        delta_xy = torch.stack([delta_x, delta_y], dim=-1)
         if repeat:
-            delta_xy = delta_xy.repeat(1, 5, 1) # 2n+1 = 5 sigma points, just hard-coding for now
+            # 2n+1 = 5 sigma points, just hard-coding for now:
+            delta_xy = delta_xy.unsqueeze(1).repeat(1, 5, 1)
         next_xy = start_xy + delta_xy
         return next_xy
+
+    def get_trajectory(self, start_state, actions):
+        """
+        Applies dynamics from start state with action sequence to get trajectories.
+        """
+        T = actions.size(0)
+        n_trajs = actions.size(1)
+        start_state = start_state.repeat(n_trajs, 1)
+        trajs = torch.zeros(T+1, n_trajs, 2)
+        trajs[0] = start_state
+        for t in range(T):
+            trajs[t+1] = self.dynamics(trajs[t], actions[t], False)
+        return trajs
 
     def fk(self, q):
         """
@@ -58,9 +90,10 @@ class Navigation2DEnvironment:
         """
         robot_pts = self.fk(q)
         robot_edges = self._edges_of(robot_pts)
-        for polygon in self.polygons:
-            for o in [self._orthogonal(e) for e in robot_edges + self._edges_of(polygon)]:
-                if self._is_separating_axis(o, robot_pts, polygon):
+        robot_orthogonals = [self._orthogonal(e) for e in robot_edges]
+        for i, polygon_orthogonals in enumerate(self.polygon_orthogonals):
+            for o in robot_orthogonals + polygon_orthogonals:
+                if self._is_separating_axis(o, robot_pts, self.polygons[i]):
                     return False
         return True
             
@@ -117,13 +150,15 @@ class Navigation2DEnvironment:
         p_G = MultivariateNormal(goal_mu, goal_sigma)
         T = len(mus)
         for t in range(T):
-            lambda_ = (t+1) / T
+            # Increasing contribution of KL cost as time increases
+            lambda_ = (t + 1) / T
             p_t = MultivariateNormal(mus[t], sigmas[t])
-            cost += lambda_ * kl_divergence(p_G, p_t)
+            cost += lambda_ * kl_divergence(p_t, p_G)
             
         # Compute collision costs based on sigma points
         n_points = float(len(sigma_points))
         for i, Y in enumerate(sigma_points):
+            # Decreasing contribution of collision cost as time increases
             lambda_ = (n_points - i) / n_points
             B = Y.size(0)
             n_sigma = Y.size(1)
@@ -131,8 +166,8 @@ class Navigation2DEnvironment:
             # TODO ideally you can batch compute the collisions, will need to rewrite the
             # collision check code though
             in_collision = torch.zeros(B * n_sigma)
-            for i in range(len(in_collision)):
-                in_collision[i] = float(self.in_collision(Y[i])) * 100.0
+            for j in range(len(in_collision)):
+                in_collision[j] = float(self.in_collision(Y[j])) * 100.0
             # TODO for now just trying a simple summing
             cost += lambda_ * in_collision.view(B, n_sigma).sum(dim=1)
         
@@ -140,6 +175,8 @@ class Navigation2DEnvironment:
 
     def _create_collision_objects(self):
         self.polygons = []
+        self.polygon_edges = []
+        self.polygon_orthogonals = []
         for obj_id, obj_data in self.object_config.items():
             if obj_data['type'] == 'cube':
                 origin = obj_data['position']
@@ -150,6 +187,10 @@ class Navigation2DEnvironment:
                 p2 = p1 + np.array([0, -W])
                 p3 = p2 + np.array([-L, 0])
                 polygon = [p0, p1, p2, p3, p0]
+                edges = self._edges_of(polygon)
+                orthogonals = [self._orthogonal(e) for e in edges]
                 self.polygons.append(polygon)
+                self.polygon_edges.append(edges)
+                self.polygon_orthogonals.append(orthogonals)
             else:
                 print(f"Unknown object type for making collision object: {obj_data['type']}")    

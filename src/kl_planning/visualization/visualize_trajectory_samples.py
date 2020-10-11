@@ -38,7 +38,7 @@ class TrajectorySampleVisualizer:
             self._debug_log(f"Samples shape: {samples.shape}")
             self._debug_log(f"Costs length: {len(costs)}")
 
-        colors = vis_util.get_color_sequence(len(costs))
+        colors = vis_util.get_color_sequence(len(costs), 'coolwarm')
         # colors = [[1, 0, 0, 1] for _ in range(len(costs))]
         self.samples_msg = MarkerArray([self._get_marker(samples[:,i,:], colors[i], i)
                                         for i in range(len(costs))])

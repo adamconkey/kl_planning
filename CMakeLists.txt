@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   std_msgs
   sensor_msgs
+  geometry_msgs
 )
 
 catkin_python_setup()
@@ -16,12 +17,14 @@ add_service_files(
   FILES
   DisplayImage.srv
   VisualizeTrajectorySamples.srv
+  SetPose.srv
 )
 
 generate_messages(
   DEPENDENCIES
   std_msgs
   sensor_msgs
+  geometry_msgs
 )
 
 catkin_package(

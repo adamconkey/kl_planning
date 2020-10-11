@@ -8,6 +8,7 @@ from visualization_msgs.msg import MarkerArray
 
 from kl_planning.environments import Navigation2DEnvironment
 from kl_planning.util import ros_util
+from kl_planning.srv import SetPose, SetPoseResponse
 
 
 class SceneManager:
@@ -22,7 +23,10 @@ class SceneManager:
         self.start_goal_pub = rospy.Publisher("/start_goal", MarkerArray, queue_size=1)
         self.agent_pub = rospy.Publisher("/agent", MarkerArray, queue_size=1)
 
+        rospy.Service("/visualization/set_agent_location", SetPose, self._update_agent_location)
+
     def create_scene(self, env):
+        self.env = env
         self.scene_msg = ros_util.get_marker_array_msg(env.object_config)
         self.start_goal_msg = ros_util.get_marker_array_msg(env.indicator_config)
         self.agent_msg = ros_util.get_marker_array_msg(env.agent_config)
@@ -40,6 +44,10 @@ class SceneManager:
 
     def shutdown(self):
         rospy.loginfo("Exiting")
+
+    def _update_agent_location(self, req):
+        self.agent_msg.markers[0].pose = req.pose
+        return SetPoseResponse(success=True)
 
 
 if __name__ == '__main__':
