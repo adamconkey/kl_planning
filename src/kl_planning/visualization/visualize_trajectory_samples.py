@@ -30,22 +30,22 @@ class TrajectorySampleVisualizer:
     def _visualize_samples(self, req):
         samples = np.array(req.samples).reshape(req.shape)
         costs = list(req.costs)
-        if len(costs) != samples.shape[1]:
-            rospy.logerr(f"Size of costs ({len(cost)}) does not equal number"
-                         f" of samples ({samples.shape})")
-            return VisualizeTrajectorySamplesResponse(success=False)
+        size = req.size
         if self.debug:
             self._debug_log(f"Samples shape: {samples.shape}")
             self._debug_log(f"Costs length: {len(costs)}")
+            self._debug_log(f"Size: {size}")
 
-        colors = vis_util.get_color_sequence(len(costs), 'coolwarm')
-        # colors = [[1, 0, 0, 1] for _ in range(len(costs))]
-        self.samples_msg = MarkerArray([self._get_marker(samples[:,i,:], colors[i], i)
-                                        for i in range(len(costs))])
+        if costs:
+            colors = vis_util.get_color_sequence(len(costs), 'coolwarm')
+            colors = [list(c) + [1] for c in colors] # Add alpha
+        else:
+            colors = [[0, 0, 0, 1] for _ in range(samples.shape[1])]
+        self.samples_msg = MarkerArray([self._get_marker(samples[:,i,:], colors[i], i, size)
+                                        for i in range(samples.shape[1])])
         return VisualizeTrajectorySamplesResponse(success=True)
 
-    def _get_marker(self, points, color, marker_id=0, size=0.01, frame_id='world', z=0.01,
-                    alpha=1):
+    def _get_marker(self, points, color, marker_id=0, size=0.03, frame_id='world', z=0.05):
         m = Marker()
         m.header.frame_id = frame_id
         m.id = marker_id
@@ -53,7 +53,6 @@ class TrajectorySampleVisualizer:
         m.action = Marker.ADD
         m.scale.x = size
         m.pose.orientation.w = 1
-        color = [c for c in color] + [alpha]
         m.color = ColorRGBA(*color)
         for i in range(len(points)):
             m.points.append(Point(points[i, 0], points[i, 1], z))
