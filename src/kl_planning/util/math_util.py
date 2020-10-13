@@ -33,6 +33,6 @@ def unscented_transform(mu, sigma, g, alpha=1, beta=2, kappa=1):
     for i in range(n_sigma):
         y = Y[:,i,:] - mu_prime
         sigma_prime += w_c[:,i] * y.unsqueeze(2) * y.unsqueeze(1) # outer product
-    # sigma_prime += Q
+    sigma_prime += Q
         
     return mu_prime, sigma_prime, Y
