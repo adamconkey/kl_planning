@@ -50,14 +50,14 @@ if __name__ == '__main__':
     goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 0.5], dtype=torch.float32))
 
     # Actions are wheel rotations which then induce delta x, y, theta
-    min_act = torch.tensor([-0.5, -0.2])
-    max_act = torch.tensor([0.5, 0.2])
+    min_act = torch.tensor([-0.25, -0.3])
+    max_act = torch.tensor([0.25, 0.3])
 
     env.set_agent_location(start_mu)
     
     for k in range(100):
         act = planner.plan_cem(env, start_mu, start_sigma, goal_mu, goal_sigma,
-                               min_act, max_act, visualize=True)
+                               min_act, max_act, visualize=False)
 
         mus = [start_mu.unsqueeze(0)]
         sigmas = [start_sigma.unsqueeze(0)]

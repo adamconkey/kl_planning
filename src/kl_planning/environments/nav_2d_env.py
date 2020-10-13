@@ -49,7 +49,7 @@ class Navigation2DEnvironment:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call to set agent location failed: {e}")
         
-    def dynamics(self, start_pose, act):
+    def dynamics(self, start_pose, act, noise_gain=0.02):
         """
         start_pose (b, 3) x, y, theta
         act (b, 2) 
@@ -62,6 +62,9 @@ class Navigation2DEnvironment:
         delta_y = act[:,0] * torch.sin(next_pose[:,-1])
         next_pose[:,0] += delta_x
         next_pose[:,1] += delta_y
+
+        # Add in noise on resulting state to model stochastic transition
+        next_pose += torch.randn_like(next_pose) * noise_gain
         
         # delta_x = self.wheel_radius * torch.cos(act[:,0] + act[:,1]) / 2.
         # delta_y = self.wheel_radius * torch.sin(act[:,0] + act[:,1]) / 2.

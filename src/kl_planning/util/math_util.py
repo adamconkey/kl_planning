@@ -12,8 +12,6 @@ def unscented_transform(mu, sigma, g, alpha=1, beta=2, kappa=1):
     n_sigma = 2 * n + 1
     lambda_ = alpha**2 * (n + kappa) - n
 
-    Q = torch.diag_embed(torch.rand(B, n), dim1=-2, dim2=-1) * 0.005
-
     w_m = torch.full((B, n_sigma, 1), 1. / (2 * (n + lambda_)))
     w_c = torch.full((B, n_sigma, 1, 1), 1. / (2 * (n + lambda_)))
     w_m[:,0] = lambda_ / (n + lambda_)
@@ -33,6 +31,11 @@ def unscented_transform(mu, sigma, g, alpha=1, beta=2, kappa=1):
     for i in range(n_sigma):
         y = Y[:,i,:] - mu_prime
         sigma_prime += w_c[:,i] * y.unsqueeze(2) * y.unsqueeze(1) # outer product
-    sigma_prime += Q
+
+    # TODO can add in this process noise which is in standard UKF, however I think UKF
+    # assumes you're using a deterministic nonlinear function. I have stochastic dynamics
+    # so I think it should be equivalent to not model it here and instead just compute
+    # sigma points being passed through stochastic nonlinear function.
+    # sigma_prime += torch.diag_embed(torch.rand(B, n), dim1=-2, dim2=-1) * 0.005
         
     return mu_prime, sigma_prime, Y
