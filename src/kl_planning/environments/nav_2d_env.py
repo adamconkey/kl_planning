@@ -49,18 +49,31 @@ class Navigation2DEnvironment:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call to set agent location failed: {e}")
         
-    def dynamics(self, start_pose, act, repeat=True):
+    def dynamics(self, start_pose, act):
         """
-        start_xy (b, 2) x, y
-        act (b, 2) dist, angle
+        start_pose (b, 3) x, y, theta
+        act (b, 2) 
         """
-        delta_x = self.wheel_radius * torch.cos(act[:,0] + act[:,1])
-        delta_y = self.wheel_radius * torch.sin(act[:,0] + act[:,1])
-        delta_theta = (self.wheel_radius / self.robot_length) * (act[:,0] - act[:,1])
-        delta = torch.stack([delta_x, delta_y, delta_theta], dim=-1)
-        if repeat:
-            delta = delta.unsqueeze(1).repeat(1, 2*start_pose.size(-1) + 1, 1) # 2n+1 sigma points
-        next_pose = start_pose + delta
+
+        next_pose = start_pose.detach().clone()
+        next_pose[:,-1] += act[:,-1]
+        next_pose[:,-1].clamp_(min=-np.pi, max=np.pi)
+        delta_x = act[:,0] * torch.cos(next_pose[:,-1])
+        delta_y = act[:,0] * torch.sin(next_pose[:,-1])
+        next_pose[:,0] += delta_x
+        next_pose[:,1] += delta_y
+        
+        # delta_x = self.wheel_radius * torch.cos(act[:,0] + act[:,1]) / 2.
+        # delta_y = self.wheel_radius * torch.sin(act[:,0] + act[:,1]) / 2.
+        # delta_theta = (self.wheel_radius / self.robot_length) * (act[:,0] - act[:,1])
+
+        # TODO I think the dynamics are nonsense, need to try to fix this
+        
+        # delta_x = (self.wheel_radius / 2.) * (act[:,0] + act[:,1]) * torch.cos(start_pose[:,-1])
+        # delta_y = (self.wheel_radius / 2.) * (act[:,0] + act[:,1]) * torch.sin(start_pose[:,-1])
+        # delta_theta = (self.wheel_radius / self.robot_length) * (act[:,0] - act[:,1])
+        # delta = torch.stack([delta_x, delta_y, delta_theta], dim=-1)
+        # next_pose = start_pose + delta
         return next_pose
 
     def get_trajectory(self, start_state, actions):
@@ -73,7 +86,7 @@ class Navigation2DEnvironment:
         trajs = torch.zeros(T+1, n_trajs, 3)
         trajs[0] = start_state
         for t in range(T):
-            trajs[t+1] = self.dynamics(trajs[t], actions[t], False)
+            trajs[t+1] = self.dynamics(trajs[t], actions[t])
         return trajs
 
     def fk(self, q):
@@ -92,26 +105,25 @@ class Navigation2DEnvironment:
         Based on separating axis theorem code here: 
             https://hackmd.io/@US4ofdv7Sq2GRdxti381_A/ryFmIZrsl
         """
-        # TODO mocking hard to see if collision checker is fucked
-        return q[0] > -0.7 and q[0] < 0.7 and q[1] > -0.7 and q[1] < 0.7
+        # TODO super hacked, need to at least get this from config
+        return (q[:,0] > -0.7) * (q[:,0] < 0.7) * (q[:,1] > -0.7) * (q[:,1] < 0.7)
 
     def cost(self, act, start_mu, start_sigma, goal_mu, goal_sigma):
         mus = [start_mu]
         sigmas = [start_sigma]
         sigma_points = []
 
-        start = time()
         for t in range(len(act)):
-            g = lambda x: self.dynamics(x, act[t])
+            act_t = act[t].unsqueeze(1).repeat(1, 2 * start_mu.size(-1) + 1, 1)
+            act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
+            g = lambda x: self.dynamics(x, act_t)
             mu_prime, sigma_prime, Y = math_util.unscented_transform(mus[-1], sigmas[-1], g)
             mus.append(mu_prime)
             sigmas.append(sigma_prime)
             sigma_points.append(Y)
-        print(f"UNSCENTED: {time() - start}")
             
         cost = 0
 
-        start = time()
         # Compute KL cost from final distribution to goal distribution
         kl_cost = 0
         p_G = MultivariateNormal(goal_mu, goal_sigma)
@@ -121,11 +133,11 @@ class Navigation2DEnvironment:
             lambda_ = (t + 1) / float(T)
             p_t = MultivariateNormal(mus[t], sigmas[t])
             kl_cost += lambda_ * kl_divergence(p_t, p_G)
-        print(f"KL COST: {time() - start}")
         cost += kl_cost
+
+        # print("KL COST", kl_cost)
             
         # Compute collision costs based on sigma points
-        start = time()
         collision_cost = 0
         n_points = float(len(sigma_points))
         for i, Y in enumerate(sigma_points):
@@ -133,15 +145,12 @@ class Navigation2DEnvironment:
             lambda_ = (n_points - i) / n_points
             B = Y.size(0)
             n_sigma = Y.size(1)
-            # TODO ideally you can batch compute the collisions, will need to rewrite the
-            # collision check code though
-            in_collision = torch.zeros(B, n_sigma)
-            for j in range(B):
-                for k in range(n_sigma):
-                    in_collision[j, k] = float(self.in_collision(Y[j, k])) * 1000000.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 1000.0
+            in_collision = in_collision.view(B, n_sigma)
             collision_cost += lambda_ * in_collision.sum(dim=1)
-        print(f"COLLISION COST: {time() - start}")
         cost += collision_cost
+
+        # print("COLLISION", collision_cost)
 
         return cost
 

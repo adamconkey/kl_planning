@@ -3,9 +3,7 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /MeshDisplayCustom1
-        - /Trajectory Samples1
+      Expanded: ~
       Splitter Ratio: 0.507905125617981
     Tree Height: 726
   - Class: rviz/Selection
@@ -102,7 +100,7 @@ Visualization Manager:
       Marker Topic: /visualization/trajectory_samples
       Name: Trajectory Samples
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
   Enabled: true

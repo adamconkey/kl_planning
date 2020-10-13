@@ -14,14 +14,14 @@ class Planner:
         pass
 
     def plan_cem(self, env, start_mu, start_sigma, goal_mu, goal_sigma,
-                 min_act, max_act, horizon=5, n_iters=5, n_candidates=100,
-                 n_elite=10, visualize=False, action_size=2):
+                 min_act, max_act, horizon=5, n_iters=10, n_candidates=1000,
+                 n_elite=100, visualize=False, action_size=2):
     
         start_mu = start_mu.repeat(n_candidates, 1)
         start_sigma = start_sigma.repeat(n_candidates, 1, 1)
         
         act_mu = torch.zeros(horizon, 1, action_size)
-        act_sigma = torch.ones(horizon, 1, action_size) * 3
+        act_sigma = torch.ones(horizon, 1, action_size)
     
         best_costs = []
         worst_costs = []
@@ -34,6 +34,7 @@ class Planner:
             if visualize:
                 trajs = env.get_trajectory(start_mu[0], act)
                 vis_util.visualize_trajectory_samples(trajs, size=0.005)
+                # rospy.sleep(3)
                 
             # Find top K low-cost action sequences
             costs = env.cost(act, start_mu, start_sigma, goal_mu, goal_sigma)
@@ -43,7 +44,7 @@ class Planner:
             if visualize:
                 trajs = env.get_trajectory(start_mu[0], elite)
                 vis_util.visualize_trajectory_samples(trajs, topk_costs)
-                rospy.sleep(1)
+                # rospy.sleep(1)
             
             # Update belief with new means and standard deviations
             act_mu = elite.mean(dim=1, keepdim=True)
