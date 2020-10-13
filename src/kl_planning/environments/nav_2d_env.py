@@ -19,6 +19,9 @@ class Navigation2DEnvironment:
         self.object_config = scene_config['objects']
         self.agent_config = scene_config['agents']
         self.indicator_config = scene_config['indicators']
+
+        self.wheel_radius = self.agent_config['agent']['wheel_radius']
+        self.robot_length = self.agent_config['agent']['length']
         
         self._create_collision_objects()
 
@@ -30,12 +33,12 @@ class Navigation2DEnvironment:
         self.p2 = self.p1 + np.array([0, -W])
         self.p3 = self.p2 + np.array([-L, 0])
 
-    def set_agent_location(self, position, angle):
-        quat = R.from_euler('z', angle, degrees=False).as_quat()
+    def set_agent_location(self, pose):
         req = SetPoseRequest()
-        req.pose.position.x = position[0]
-        req.pose.position.y = position[1]
+        req.pose.position.x = pose[0]
+        req.pose.position.y = pose[1]
         req.pose.position.z = 0.01 # TODO hard-code
+        quat = R.from_euler('z', pose[2], degrees=False).as_quat()
         req.pose.orientation.x = quat[0]
         req.pose.orientation.y = quat[1]
         req.pose.orientation.z = quat[2]
@@ -46,19 +49,19 @@ class Navigation2DEnvironment:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call to set agent location failed: {e}")
         
-    def dynamics(self, start_xy, act, repeat=True):
+    def dynamics(self, start_pose, act, repeat=True):
         """
         start_xy (b, 2) x, y
         act (b, 2) dist, angle
         """
-        delta_x = act[:,0] * torch.cos(act[:,1])
-        delta_y = act[:,0] * torch.sin(act[:,1])
-        delta_xy = torch.stack([delta_x, delta_y], dim=-1)
+        delta_x = self.wheel_radius * torch.cos(act[:,0] + act[:,1])
+        delta_y = self.wheel_radius * torch.sin(act[:,0] + act[:,1])
+        delta_theta = (self.wheel_radius / self.robot_length) * (act[:,0] - act[:,1])
+        delta = torch.stack([delta_x, delta_y, delta_theta], dim=-1)
         if repeat:
-            # 2n+1 = 5 sigma points, just hard-coding for now:
-            delta_xy = delta_xy.unsqueeze(1).repeat(1, 5, 1)
-        next_xy = start_xy + delta_xy
-        return next_xy
+            delta = delta.unsqueeze(1).repeat(1, 2*start_pose.size(-1) + 1, 1) # 2n+1 sigma points
+        next_pose = start_pose + delta
+        return next_pose
 
     def get_trajectory(self, start_state, actions):
         """
@@ -67,7 +70,7 @@ class Navigation2DEnvironment:
         T = actions.size(0)
         n_trajs = actions.size(1)
         start_state = start_state.repeat(n_trajs, 1)
-        trajs = torch.zeros(T+1, n_trajs, 2)
+        trajs = torch.zeros(T+1, n_trajs, 3)
         trajs[0] = start_state
         for t in range(T):
             trajs[t+1] = self.dynamics(trajs[t], actions[t], False)

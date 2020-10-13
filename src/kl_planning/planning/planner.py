@@ -14,7 +14,7 @@ class Planner:
         pass
 
     def plan_cem(self, env, start_mu, start_sigma, goal_mu, goal_sigma,
-                 min_act, max_act, horizon=5, n_iters=10, n_candidates=100,
+                 min_act, max_act, horizon=5, n_iters=5, n_candidates=100,
                  n_elite=10, visualize=False, action_size=2):
     
         start_mu = start_mu.repeat(n_candidates, 1)
@@ -38,13 +38,6 @@ class Planner:
             # Find top K low-cost action sequences
             costs = env.cost(act, start_mu, start_sigma, goal_mu, goal_sigma)
             topk_costs, topk_indices = costs.topk(n_elite, dim=-1, largest=False, sorted=False)    
-            # topk_costs = topk_costs.squeeze()
-
-            # print("COST", costs)
-            # print("TOP", topk_costs)
-
-            # best_costs.append(topk_costs[0].item())
-            # worst_costs.append(topk_costs[-1].item())
             elite = act[:, topk_indices]
 
             if visualize:
@@ -55,12 +48,5 @@ class Planner:
             # Update belief with new means and standard deviations
             act_mu = elite.mean(dim=1, keepdim=True)
             act_sigma = elite.std(dim=1, keepdim=True)
-    
-        # if visualize:
-        #     plt.title("Elite Costs")
-        #     plt.plot(best_costs, label='Best')
-        #     plt.plot(worst_costs, label='Worst')
-        #     plt.legend()
-        #     plt.show()
     
         return act_mu.squeeze()

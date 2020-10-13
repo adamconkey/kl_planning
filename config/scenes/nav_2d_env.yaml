@@ -143,8 +143,8 @@ indicators:
 agents:
   agent:
     type: cube
-    length: 0.25
-    width: 0.1
+    length: 0.2
+    width: 0.2
     height: 0.05
     position:
       - -1.5
@@ -161,3 +161,4 @@ agents:
       - 0.23
       - 0.23
       - 1
+    wheel_radius: 0.2

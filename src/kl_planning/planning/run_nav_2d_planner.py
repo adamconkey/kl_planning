@@ -25,7 +25,7 @@ def plot(mus, sigmas):
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(10, 10)
     for mu, sigma in zip(mus, sigmas):
-        rv = multivariate_normal(mu.squeeze(), sigma.squeeze())
+        rv = multivariate_normal(mu.squeeze()[:2], sigma.squeeze()[:2,:2])
         ax.contour(rv.pdf(pos).reshape(500,500))
     ax.axis('off')
     plt.tight_layout()
@@ -43,16 +43,18 @@ if __name__ == '__main__':
     # TODO for now this is just hard-coding some stuff to get running, will want
     # to make this all configurable
     
-    start_mu = torch.tensor([-1.5, 1.5], dtype=torch.float32)
-    start_sigma = torch.diag(torch.tensor([0.001, 0.001], dtype=torch.float32))
+    start_mu = torch.tensor([-1.5, 1.5, 0], dtype=torch.float32)
+    start_sigma = torch.diag(torch.tensor([0.001, 0.001, 0.001], dtype=torch.float32))
 
-    goal_mu = torch.tensor([1.5, -1.5], dtype=torch.float32)
-    goal_sigma = torch.diag(torch.tensor([0.03, 0.03], dtype=torch.float32))
+    goal_mu = torch.tensor([1.5, -1.5, 0], dtype=torch.float32)
+    goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 0.001], dtype=torch.float32))
 
-    min_act = torch.tensor([0, -pi])
-    max_act = torch.tensor([0.5, pi])
+    # Actions are wheel rotations which then induce delta x, y, theta
+    delta = 0.5
+    min_act = torch.tensor([-delta, -delta])
+    max_act = torch.tensor([delta, delta])
 
-    env.set_agent_location(start_mu, 0)
+    env.set_agent_location(start_mu)
     
     for k in range(10):
         act_seq = planner.plan_cem(env, start_mu, start_sigma, goal_mu, goal_sigma,
@@ -69,7 +71,7 @@ if __name__ == '__main__':
 
         # Update current position for next planning step
         start_mu = env.dynamics(start_mu, act_seq[0].unsqueeze(0), repeat=False).squeeze()
-        env.set_agent_location(start_mu, act_seq[0][-1])
+        env.set_agent_location(start_mu)
     
         mus.append(goal_mu)
         sigmas.append(goal_sigma)
