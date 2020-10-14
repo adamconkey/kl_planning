@@ -46,12 +46,12 @@ if __name__ == '__main__':
     start_mu = torch.tensor([-1.5, 1.5, 0.0], dtype=torch.float32)
     start_sigma = torch.diag(torch.tensor([0.001, 0.001, 0.001], dtype=torch.float32))
 
-    goal_mu = torch.tensor([-1.5, -1.5, -np.pi], dtype=torch.float32)
-    goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 0.5], dtype=torch.float32))
+    goal_mu = torch.tensor([1.5, 1.5, 0.0], dtype=torch.float32)
+    goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 1.0], dtype=torch.float32))
 
     # Actions are wheel rotations which then induce delta x, y, theta
-    phi_max = 0.7
-    min_act = torch.tensor([-np.tan(phi_max).astype(np.float32), 0.2])
+    phi_max = 1.
+    min_act = torch.tensor([-np.tan(phi_max).astype(np.float32), 0.])
     max_act = torch.tensor([np.tan(phi_max).astype(np.float32), 1.])
 
     env.set_agent_location(start_mu)
@@ -72,21 +72,22 @@ if __name__ == '__main__':
             sigmas.append(sigma_prime)
 
         # Update current position for next planning step
-        start_mu = env.dynamics(start_mu.unsqueeze(0), act[0].unsqueeze(0)).squeeze()
+        start_mu = env.dynamics(start_mu.unsqueeze(0), act[0].unsqueeze(0),
+                                noise_gain=0.0).squeeze()
         env.set_agent_location(start_mu)
     
         mus.append(goal_mu)
         sigmas.append(goal_sigma)
 
-        plot(mus, sigmas)
+        # plot(mus, sigmas)
 
-        img = cv2.imread('/tmp/kl_img.png', cv2.IMREAD_COLOR)
-        img_msg = CvBridge().cv2_to_imgmsg(img, "bgr8")
+        # img = cv2.imread('/tmp/kl_img.png', cv2.IMREAD_COLOR)
+        # img_msg = CvBridge().cv2_to_imgmsg(img, "bgr8")
     
-        display_img = rospy.ServiceProxy("/display_image", DisplayImage)
-        try:
-            display_img(DisplayImageRequest(img_msg))
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service request to display image failed: {e}")
+        # display_img = rospy.ServiceProxy("/display_image", DisplayImage)
+        # try:
+        #     display_img(DisplayImageRequest(img_msg))
+        # except rospy.ServiceException as e:
+        #     rospy.logerr(f"Service request to display image failed: {e}")
 
-        plt.close('all') # Free up memory
+        # plt.close('all') # Free up memory

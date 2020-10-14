@@ -5,7 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded: ~
       Splitter Ratio: 0.507905125617981
-    Tree Height: 726
+    Tree Height: 363
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -100,7 +100,7 @@ Visualization Manager:
       Marker Topic: /visualization/trajectory_samples
       Name: Trajectory Samples
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -131,25 +131,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.852518558502197
+      Distance: 5.976021766662598
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.009194856509566307
-        Y: 0.1735987514257431
-        Z: 0.20504361391067505
+        X: -0.20864327251911163
+        Y: -0.003369848243892193
+        Z: -0.13639843463897705
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 0.8397970199584961
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.70858907699585
+      Yaw: 3.1335813999176025
     Saved: ~
 Window Geometry:
   Displays:

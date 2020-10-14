@@ -49,7 +49,7 @@ class Navigation2DEnvironment:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call to set agent location failed: {e}")
         
-    def dynamics(self, start_pose, act, velocity=0.7, noise_gain=0.02):
+    def dynamics(self, start_pose, act, velocity=0.5, noise_gain=0.02):
         """
         start_pose (b, 3) x, y, theta
         act (b, 2) 
@@ -58,14 +58,14 @@ class Navigation2DEnvironment:
         rate and duration for that action. A constant velocity is given such that
         if turn rate is zero then it goes in straight line at a constant velocity.
         """
-        u = act[:,0]
+        # Adding small value so it doesn't divide by zero, this avoids having to do boolean
+        # check on all values, will get washed out in noisy dynamics anyways
+        u = act[:,0] + 1e-5
         dt = act[:,1]
         dt_u = dt * u
         theta = start_pose[:,2]
 
         next_pose = start_pose.detach().clone()
-        # TODO this might divide by zero, CEMP does a switch based on if it's zero
-        # but probably better to just add a small value if it's a problem
         next_pose[:,0] += (velocity / u) * (torch.sin(theta + dt_u) - torch.sin(theta))
         next_pose[:,1] += (velocity / u) * (torch.cos(theta) - torch.cos(theta + dt_u))
         next_pose[:,2] += dt_u
@@ -75,7 +75,7 @@ class Navigation2DEnvironment:
         
         return next_pose
 
-    def get_trajectory(self, start_state, actions):
+    def get_trajectory(self, start_state, actions, noise_gain=0.0):
         """
         Applies dynamics from start state with action sequence to get trajectories.
         """
@@ -83,33 +83,38 @@ class Navigation2DEnvironment:
         n_trajs = actions.size(1)
         start_state = start_state.repeat(n_trajs, 1)
         trajs = torch.zeros(T+1, n_trajs, 3)
+
+        
         trajs[0] = start_state
         for t in range(T):
-            trajs[t+1] = self.dynamics(trajs[t], actions[t])
+            trajs[t+1] = self.dynamics(trajs[t], actions[t], noise_gain=noise_gain)
         return trajs
 
-    def fk(self, q):
-        """
-        Assuming q is the centroid point of a rectangle
-        """
-
-        p0 = q + self.p0
-        p1 = q + self.p1
-        p2 = q + self.p2
-        p3 = q + self.p3
-        return [p0, p1, p2, p3, p0]
-
     def in_collision(self, q):
-        """
-        Based on separating axis theorem code here: 
-            https://hackmd.io/@US4ofdv7Sq2GRdxti381_A/ryFmIZrsl
-        """
         in_collision = torch.zeros(q.size(0), dtype=torch.bool)
-        for checker in self.collision_checkers:
-            in_collision += checker(q)  # Boolean OR operation
+        for obj_id, checker in self.collision_checkers.items():
+            obj_in_collision = checker(q)
+
+            # print(obj_id, obj_in_collision)
+            
+            in_collision += obj_in_collision  # Boolean OR operation
+        # print("FINAL", in_collision)
         return in_collision
 
-    def cost(self, act, start_mu, start_sigma, goal_mu, goal_sigma):
+    def euclidean_cost(self, act, start_state, goal_state, lambda_=1.0, noise_gain=0.0):
+        cost = 0
+        trajs = self.get_trajectory(start_state, act, noise_gain)[1:] # Exclude start state
+        for t in range(len(trajs)):
+            # Euclidean distance cost to goal
+            cost += 1 + lambda_ * (goal_state - trajs[t]).square().sum(dim=-1)
+            # Collision cost
+            cost += self.in_collision(trajs[t]) * 100.0
+
+
+            
+        return cost
+    
+    def kl_cost(self, act, start_mu, start_sigma, goal_mu, goal_sigma):
         mus = [start_mu]
         sigmas = [start_sigma]
         sigma_points = []
@@ -146,17 +151,17 @@ class Navigation2DEnvironment:
             lambda_ = (n_points - i) / n_points
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 1000000.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 100.0
             in_collision = in_collision.view(B, n_sigma)
-            collision_cost += lambda_ * in_collision.sum(dim=1)
+            collision_cost += in_collision.sum(dim=1)
         cost += collision_cost
 
-        # print("COLLISION", collision_cost)
+        # print("COST", cost)
 
         return cost
 
     def _create_collision_checkers(self, buffer_=0.2):
-        self.collision_checkers = []
+        self.collision_checkers = {}
         for obj_id, obj_data in self.object_config.items():
             if obj_data['type'] == 'cube':
                 # TODO this is simplified for now to make it fast to check, assumes cubes are
@@ -168,8 +173,10 @@ class Navigation2DEnvironment:
                 x_h = origin[0] + (L / 2.) + buffer_
                 y_l = origin[1] - (W / 2.) - buffer_
                 y_h = origin[1] + (W / 2.) + buffer_
-                # Multiplication on bool tensors is AND operator
-                f = lambda x: (x[:,0] > x_l) * (x[:,0] < x_h) * (x[:,1] > y_l) * (x[:,1] < y_h)
-                self.collision_checkers.append(f)
+                self.collision_checkers[obj_id] = self._collision_checker_factory(x_l, x_h, y_l, y_h)
             else:
                 print(f"Unknown object type for making collision object: {obj_data['type']}")    
+
+    def _collision_checker_factory(self, x_l, x_h, y_l, y_h):
+        # Multiplication on bool tensors is AND operator
+        return lambda x: (x[:,0] > x_l) * (x[:,0] < x_h) * (x[:,1] > y_l) * (x[:,1] < y_h)

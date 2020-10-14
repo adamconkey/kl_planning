@@ -1,12 +1,12 @@
 objects:
   north_wall:
     type: cube
-    length: 3.9
-    width: 0.1
+    length: 4
+    width: 4
     height: 0.1
     position:
       - 0
-      - 2
+      - 4
       - 0.05
     orientation:
       - 0
@@ -21,12 +21,12 @@ objects:
       - 1
   south_wall:
     type: cube
-    length: 3.9
-    width: 0.1
+    length: 4
+    width: 4
     height: 0.1
     position:
       - 0
-      - -2
+      - -4
       - 0.05
     orientation:
       - 0
@@ -41,18 +41,18 @@ objects:
       - 1
   east_wall:
     type: cube
-    length: 4.1
-    width: 0.1
+    length: 4
+    width: 12
     height: 0.1
     position:
-      - 2
+      - 4
       - 0
       - 0.05
     orientation:
       - 0
       - 0
-      - 0.7071068
-      - 0.7071068
+      - 0
+      - 1
     parent_frame: world
     color:
       - 0
@@ -61,32 +61,32 @@ objects:
       - 1
   west_wall:
     type: cube
-    length: 4.1
-    width: 0.1
+    length: 4
+    width: 12
     height: 0.1
     position:
-      - -2
+      - -4
       - 0
       - 0.05
     orientation:
       - 0
       - 0
-      - 0.7071068
-      - 0.7071068
+      - 0
+      - 1
     parent_frame: world
     color:
       - 0
       - 0
       - 1
       - 1
-  obstacle1:
+  obstacle:
     type: cube
-    length: 3
-    width: 1
+    length: 1.5
+    width: 1.5
     height: 0.1
     position:
-      - -0.5
-      - 0
+      - 0.25
+      - 0.75
       - 0.05
     orientation:
       - 0
@@ -126,8 +126,8 @@ indicators:
     width: 0.25
     height: 0.0001
     position:
-      - -1.5
-      - -1.5
+      - 1.5
+      - 1.5
       - 0
     orientation:
       - 0

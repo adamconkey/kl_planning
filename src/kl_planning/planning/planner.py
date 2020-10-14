@@ -14,8 +14,8 @@ class Planner:
         pass
 
     def plan_cem(self, env, start_mu, start_sigma, goal_mu, goal_sigma,
-                 min_act, max_act, horizon=15, n_iters=10, n_candidates=50,
-                 n_elite=5, visualize=False, action_size=2):
+                 min_act, max_act, horizon=15, n_iters=20, n_candidates=100,
+                 n_elite=10, visualize=False, action_size=2):
     
         start_mu = start_mu.repeat(n_candidates, 1)
         start_sigma = start_sigma.repeat(n_candidates, 1, 1)
@@ -34,17 +34,19 @@ class Planner:
             if visualize:
                 trajs = env.get_trajectory(start_mu[0], act)
                 vis_util.visualize_trajectory_samples(trajs, size=0.005)
-                # rospy.sleep(3)
+                rospy.sleep(1)
                 
             # Find top K low-cost action sequences
-            costs = env.cost(act, start_mu, start_sigma, goal_mu, goal_sigma)
+            # costs = env.kl_cost(act, start_mu, start_sigma, goal_mu, goal_sigma)
+            
+            costs = env.euclidean_cost(act, start_mu[0], goal_mu, noise_gain=0.0)
             topk_costs, topk_indices = costs.topk(n_elite, dim=-1, largest=False, sorted=False)    
             elite = act[:, topk_indices]
 
             if visualize:
                 trajs = env.get_trajectory(start_mu[0], elite)
                 vis_util.visualize_trajectory_samples(trajs, topk_costs)
-                # rospy.sleep(1)
+                rospy.sleep(1)
             
             # Update belief with new means and standard deviations
             act_mu = elite.mean(dim=1, keepdim=True)
