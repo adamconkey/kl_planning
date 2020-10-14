@@ -23,7 +23,7 @@ class Navigation2DEnvironment:
         self.wheel_radius = self.agent_config['agent']['wheel_radius']
         self.robot_length = self.agent_config['agent']['length']
         
-        self._create_collision_objects()
+        self._create_collision_checkers()
 
         # These save some lookups/computations in collision check
         L = self.agent_config['agent']['length']
@@ -49,34 +49,30 @@ class Navigation2DEnvironment:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call to set agent location failed: {e}")
         
-    def dynamics(self, start_pose, act, noise_gain=0.02):
+    def dynamics(self, start_pose, act, velocity=0.7, noise_gain=0.02):
         """
         start_pose (b, 3) x, y, theta
         act (b, 2) 
+
+        Trying parameterization from CEMP where action at each timestep is a turn
+        rate and duration for that action. A constant velocity is given such that
+        if turn rate is zero then it goes in straight line at a constant velocity.
         """
+        u = act[:,0]
+        dt = act[:,1]
+        dt_u = dt * u
+        theta = start_pose[:,2]
 
         next_pose = start_pose.detach().clone()
-        next_pose[:,-1] += act[:,-1]
-        next_pose[:,-1].clamp_(min=-np.pi, max=np.pi)
-        delta_x = act[:,0] * torch.cos(next_pose[:,-1])
-        delta_y = act[:,0] * torch.sin(next_pose[:,-1])
-        next_pose[:,0] += delta_x
-        next_pose[:,1] += delta_y
-
+        # TODO this might divide by zero, CEMP does a switch based on if it's zero
+        # but probably better to just add a small value if it's a problem
+        next_pose[:,0] += (velocity / u) * (torch.sin(theta + dt_u) - torch.sin(theta))
+        next_pose[:,1] += (velocity / u) * (torch.cos(theta) - torch.cos(theta + dt_u))
+        next_pose[:,2] += dt_u
+        
         # Add in noise on resulting state to model stochastic transition
         next_pose += torch.randn_like(next_pose) * noise_gain
         
-        # delta_x = self.wheel_radius * torch.cos(act[:,0] + act[:,1]) / 2.
-        # delta_y = self.wheel_radius * torch.sin(act[:,0] + act[:,1]) / 2.
-        # delta_theta = (self.wheel_radius / self.robot_length) * (act[:,0] - act[:,1])
-
-        # TODO I think the dynamics are nonsense, need to try to fix this
-        
-        # delta_x = (self.wheel_radius / 2.) * (act[:,0] + act[:,1]) * torch.cos(start_pose[:,-1])
-        # delta_y = (self.wheel_radius / 2.) * (act[:,0] + act[:,1]) * torch.sin(start_pose[:,-1])
-        # delta_theta = (self.wheel_radius / self.robot_length) * (act[:,0] - act[:,1])
-        # delta = torch.stack([delta_x, delta_y, delta_theta], dim=-1)
-        # next_pose = start_pose + delta
         return next_pose
 
     def get_trajectory(self, start_state, actions):
@@ -108,8 +104,10 @@ class Navigation2DEnvironment:
         Based on separating axis theorem code here: 
             https://hackmd.io/@US4ofdv7Sq2GRdxti381_A/ryFmIZrsl
         """
-        # TODO super hacked, need to at least get this from config
-        return (q[:,0] > -0.7) * (q[:,0] < 0.7) * (q[:,1] > -0.7) * (q[:,1] < 0.7)
+        in_collision = torch.zeros(q.size(0), dtype=torch.bool)
+        for checker in self.collision_checkers:
+            in_collision += checker(q)  # Boolean OR operation
+        return in_collision
 
     def cost(self, act, start_mu, start_sigma, goal_mu, goal_sigma):
         mus = [start_mu]
@@ -148,7 +146,7 @@ class Navigation2DEnvironment:
             lambda_ = (n_points - i) / n_points
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 1000.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 1000000.0
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += lambda_ * in_collision.sum(dim=1)
         cost += collision_cost
@@ -157,18 +155,21 @@ class Navigation2DEnvironment:
 
         return cost
 
-    def _create_collision_objects(self):
-        self.polygons = []
+    def _create_collision_checkers(self, buffer_=0.2):
+        self.collision_checkers = []
         for obj_id, obj_data in self.object_config.items():
             if obj_data['type'] == 'cube':
+                # TODO this is simplified for now to make it fast to check, assumes cubes are
+                # axis aligned to world. Can make more general if necessary.
                 origin = obj_data['position']
                 L = obj_data['length']
                 W = obj_data['width']
-                p0 = np.array([-L / 2., W / 2.])
-                p1 = p0 + np.array([L, 0])
-                p2 = p1 + np.array([0, -W])
-                p3 = p2 + np.array([-L, 0])
-                polygon = [p0, p1, p2, p3, p0]
-                self.polygons.append(polygon)
+                x_l = origin[0] - (L / 2.) - buffer_
+                x_h = origin[0] + (L / 2.) + buffer_
+                y_l = origin[1] - (W / 2.) - buffer_
+                y_h = origin[1] + (W / 2.) + buffer_
+                # Multiplication on bool tensors is AND operator
+                f = lambda x: (x[:,0] > x_l) * (x[:,0] < x_h) * (x[:,1] > y_l) * (x[:,1] < y_h)
+                self.collision_checkers.append(f)
             else:
                 print(f"Unknown object type for making collision object: {obj_data['type']}")    

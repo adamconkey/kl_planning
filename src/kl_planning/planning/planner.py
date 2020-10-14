@@ -14,8 +14,8 @@ class Planner:
         pass
 
     def plan_cem(self, env, start_mu, start_sigma, goal_mu, goal_sigma,
-                 min_act, max_act, horizon=5, n_iters=10, n_candidates=1000,
-                 n_elite=100, visualize=False, action_size=2):
+                 min_act, max_act, horizon=15, n_iters=10, n_candidates=50,
+                 n_elite=5, visualize=False, action_size=2):
     
         start_mu = start_mu.repeat(n_candidates, 1)
         start_sigma = start_sigma.repeat(n_candidates, 1, 1)

@@ -43,21 +43,22 @@ if __name__ == '__main__':
     # TODO for now this is just hard-coding some stuff to get running, will want
     # to make this all configurable
     
-    start_mu = torch.tensor([-1.5, 1.5, 0], dtype=torch.float32)
+    start_mu = torch.tensor([-1.5, 1.5, 0.0], dtype=torch.float32)
     start_sigma = torch.diag(torch.tensor([0.001, 0.001, 0.001], dtype=torch.float32))
 
-    goal_mu = torch.tensor([1.5, -1.5, -np.pi/2.], dtype=torch.float32)
+    goal_mu = torch.tensor([-1.5, -1.5, -np.pi], dtype=torch.float32)
     goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 0.5], dtype=torch.float32))
 
     # Actions are wheel rotations which then induce delta x, y, theta
-    min_act = torch.tensor([-0.25, -0.3])
-    max_act = torch.tensor([0.25, 0.3])
+    phi_max = 0.7
+    min_act = torch.tensor([-np.tan(phi_max).astype(np.float32), 0.2])
+    max_act = torch.tensor([np.tan(phi_max).astype(np.float32), 1.])
 
     env.set_agent_location(start_mu)
     
     for k in range(100):
         act = planner.plan_cem(env, start_mu, start_sigma, goal_mu, goal_sigma,
-                               min_act, max_act, visualize=False)
+                               min_act, max_act, visualize=True)
 
         mus = [start_mu.unsqueeze(0)]
         sigmas = [start_sigma.unsqueeze(0)]
