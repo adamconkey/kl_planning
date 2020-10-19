@@ -2,7 +2,6 @@ import sys
 import rospy
 import torch
 from torch.distributions import MultivariateNormal
-from torch.distributions.kl import kl_divergence
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 from time import time
@@ -19,6 +18,8 @@ class Navigation2DEnvironment:
         self.object_config = scene_config['objects']
         self.agent_config = scene_config['agents']
         self.indicator_config = scene_config['indicators']
+        self.start_config = scene_config['start']
+        self.goal_config = scene_config['goals']
 
         self.wheel_radius = self.agent_config['agent']['wheel_radius']
         self.robot_length = self.agent_config['agent']['length']
@@ -33,6 +34,21 @@ class Navigation2DEnvironment:
         self.p2 = self.p1 + np.array([0, -W])
         self.p3 = self.p2 + np.array([-L, 0])
 
+    def get_start_state(self):
+        return self.start_config['state']
+
+    def get_start_covariance(self):
+        return self.start_config['covariance']
+
+    def get_goal_states(self):
+        return [v['state'] for v in self.goal_config.values()]
+
+    def get_goal_covariances(self):
+        return [v['covariance'] for v in self.goal_config.values()]
+
+    def get_goal_weights(self):
+        return [v['weight'] for v in self.goal_config.values()]
+        
     def set_agent_location(self, pose):
         req = SetPoseRequest()
         req.pose.position.x = pose[0]
@@ -49,7 +65,7 @@ class Navigation2DEnvironment:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call to set agent location failed: {e}")
         
-    def dynamics(self, start_pose, act, velocity=0.5, noise_gain=0.02):
+    def dynamics(self, start_pose, act, noise_gain=0.02):
         """
         start_pose (b, 3) x, y, theta
         act (b, 2) 
@@ -61,13 +77,14 @@ class Navigation2DEnvironment:
         # Adding small value so it doesn't divide by zero, this avoids having to do boolean
         # check on all values, will get washed out in noisy dynamics anyways
         u = act[:,0] + 1e-5
-        dt = act[:,1]
+        v = act[:,1]
+        dt = act[:,2]
         dt_u = dt * u
         theta = start_pose[:,2]
 
         next_pose = start_pose.detach().clone()
-        next_pose[:,0] += (velocity / u) * (torch.sin(theta + dt_u) - torch.sin(theta))
-        next_pose[:,1] += (velocity / u) * (torch.cos(theta) - torch.cos(theta + dt_u))
+        next_pose[:,0] += (v / u) * (torch.sin(theta + dt_u) - torch.sin(theta))
+        next_pose[:,1] += (v / u) * (torch.cos(theta) - torch.cos(theta + dt_u))
         next_pose[:,2] += dt_u
         
         # Add in noise on resulting state to model stochastic transition
@@ -84,7 +101,6 @@ class Navigation2DEnvironment:
         start_state = start_state.repeat(n_trajs, 1)
         trajs = torch.zeros(T+1, n_trajs, 3)
 
-        
         trajs[0] = start_state
         for t in range(T):
             trajs[t+1] = self.dynamics(trajs[t], actions[t], noise_gain=noise_gain)
@@ -111,8 +127,13 @@ class Navigation2DEnvironment:
             cost += self.in_collision(trajs[t]) * 100.0
         return cost
     
-    def kl_cost(self, act, start_dist, goal_dist):
+    def kl_cost(self, act, start_dist, goal_dist, kl_divergence=None):
+        if kl_divergence is None:
+            kl_divergence = torch.distributions.kl.kl_divergence
+
         n_candidates = act.size(1)
+        n_sigma = 2 * act.size(-1) + 1
+        
         mus = [start_dist.loc.repeat(n_candidates, 1)]
         sigmas = [start_dist.covariance_matrix.repeat(n_candidates, 1, 1)]
         sigma_points = []
@@ -137,7 +158,8 @@ class Navigation2DEnvironment:
             # Increasing contribution of KL cost as time increases
             lambda_ = (t + 1) / float(T)
             p_t = MultivariateNormal(mus[t], sigmas[t])
-            kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
+            kl_cost += lambda_ * kl_divergence(p_t, goal_dist, n_candidates) # I-projection
+            # kl_cost += lambda_ * kl_divergence(goal_dist, p_t, n_candidates) # M-projection
         cost += kl_cost
 
         # print("KL COST", kl_cost)

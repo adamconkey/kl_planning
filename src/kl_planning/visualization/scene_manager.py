@@ -30,6 +30,7 @@ class SceneManager:
         self.env = env
         self.scene_msg = ros_util.get_marker_array_msg(env.object_config)
         self.start_goal_msg = ros_util.get_marker_array_msg(env.indicator_config)
+        self._add_goal_text_markers()
         self.agent_msg = ros_util.get_marker_array_msg(env.agent_config)
                 
     def run(self):
@@ -49,6 +50,23 @@ class SceneManager:
     def _update_agent_location(self, req):
         self.agent_msg.markers[0].pose = req.pose
         return SetPoseResponse(success=True)
+
+    def _add_goal_text_markers(self):
+        marker_id = 1234
+        for goal_id, goal_data in self.env.goal_config.items():
+            text_data = {
+                'type': 'text',
+                'text': str(goal_data['weight']),
+                'position': [goal_data['state'][0], goal_data['state'][1], 0.75],
+                'orientation': [0, 0, 0, 1],
+                'parent_frame': 'world',
+                'color': [1, 1, 1, 1],
+                'length': 0.3,
+                'width': 0.3,
+                'height': 0.3
+            }
+            self.start_goal_msg.markers.append(ros_util.get_marker_msg(text_data, marker_id))
+            marker_id += 1            
 
 
 if __name__ == '__main__':

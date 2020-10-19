@@ -18,6 +18,9 @@ def get_marker_msg(obj_data, marker_id=0):
         marker.type = Marker.CUBE
     elif obj_data['type'] == 'cylinder':
         marker.type = Marker.CYLINDER
+    elif obj_data['type'] == 'text':
+        marker.type = Marker.TEXT_VIEW_FACING
+        marker.text = obj_data['text']
     marker.action = Marker.MODIFY
     marker.pose.position.x = obj_data['position'][0]
     marker.pose.position.y = obj_data['position'][1]
@@ -27,13 +30,15 @@ def get_marker_msg(obj_data, marker_id=0):
     marker.pose.orientation.z = obj_data['orientation'][2]
     marker.pose.orientation.w = obj_data['orientation'][3]
     marker.header.frame_id = obj_data['parent_frame']
-    marker.scale.x = obj_data['length']
-    marker.scale.y = obj_data['width']
-    marker.scale.z = obj_data['height']
-    marker.color.r = obj_data['color'][0]
-    marker.color.g = obj_data['color'][1]
-    marker.color.b = obj_data['color'][2]
-    marker.color.a = obj_data['color'][3]
+    if 'length' in obj_data and 'width' in obj_data and 'height' in obj_data:
+        marker.scale.x = obj_data['length']
+        marker.scale.y = obj_data['width']
+        marker.scale.z = obj_data['height']
+    if 'color' in obj_data:
+        marker.color.r = obj_data['color'][0]
+        marker.color.g = obj_data['color'][1]
+        marker.color.b = obj_data['color'][2]
+        marker.color.a = obj_data['color'][3]
     return marker
 
 

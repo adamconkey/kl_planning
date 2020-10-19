@@ -8,7 +8,8 @@ setup_args = generate_distutils_setup(
         'kl_planning.environments',
         'kl_planning.planning',
         'kl_planning.util',
-        'kl_planning.visualization'
+        'kl_planning.visualization',
+        'kl_planning.models'
     ],
     package_dir={'': 'src'}
 )

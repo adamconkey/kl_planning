@@ -282,3 +282,33 @@ agents:
       - 0.23
       - 1
     wheel_radius: 0.5
+start:
+  state:
+    - -1.5  # x
+    - 0    # y
+    - 0    # theta
+  covariance:
+    - 0.001  # x
+    - 0.001  # y
+    - 0.001  # theta
+goals:
+  goal1:
+    state:
+      - 1.5  # x
+      - 1.5  # y
+      - 0    # theta
+    covariance:
+      - 0.03
+      - 0.03
+      - 1.0
+    weight: 0.2
+  goal2:
+    state:
+      - 1.5   # x
+      - -1.5  # y
+      - 0     # theta
+    covariance:
+      - 0.03
+      - 0.03
+      - 1.0
+    weight: 0.8

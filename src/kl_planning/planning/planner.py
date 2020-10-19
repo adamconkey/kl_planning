@@ -15,7 +15,7 @@ class Planner:
 
     def plan_cem(self, env, start_dist, goal_dist, min_act, max_act,
                  horizon=10, n_iters=10, n_candidates=1000, n_elite=10,
-                 visualize=False):
+                 kl_divergence=None, visualize=False):
         act_size = min_act.size(-1)
         
         # start_mu = start_mu.repeat(n_candidates, 1)
@@ -41,7 +41,7 @@ class Planner:
                 # rospy.sleep(1)
                 
             # Find top K low-cost action sequences
-            costs = env.kl_cost(act, start_dist, goal_dist)
+            costs = env.kl_cost(act, start_dist, goal_dist, kl_divergence)
             # costs = env.euclidean_cost(act, start_dist, goal_dist, noise_gain=0.0)
             topk_costs, topk_indices = costs.topk(n_elite, dim=-1, largest=False, sorted=False)    
             elite = act[:, topk_indices]

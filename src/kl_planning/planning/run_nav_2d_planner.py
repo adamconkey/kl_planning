@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import sys
 import rospy
 import rospkg
 import torch
@@ -14,7 +15,7 @@ from math import pi
 
 from kl_planning.planning import Planner
 from kl_planning.environments import Navigation2DEnvironment
-from kl_planning.util import ros_util, math_util
+from kl_planning.util import ros_util, math_util, ui_util
 from kl_planning.srv import DisplayImage, DisplayImageRequest
 
 
@@ -37,6 +38,12 @@ def plot(mus, sigmas):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dynamics_noise', type=float, default=0.02)
+    parser.add_argument('--goal_distribution', type=str, default='gaussian',
+                        choices=['gaussian', 'gmm'])
+    parser.add_argument('--horizon', type=int, default=10)
+    parser.add_argument('--n_iters', type=int, default=10)
+    parser.add_argument('--n_candidates', type=int, default=100)
+    parser.add_argument('--n_elite', type=int, default=10)
     args = parser.parse_args()
 
     scene = rospy.get_param("scene")
@@ -48,52 +55,73 @@ if __name__ == '__main__':
     planner = Planner()
     env = Navigation2DEnvironment(config_path)
     
-    # TODO for now this is just hard-coding some stuff to get running, will want
-    # to make this all configurable
-
-    start_pos = env.indicator_config['start']['position']
-    start_mu = torch.tensor([start_pos[0], start_pos[1], 0.0], dtype=torch.float32)
-    start_sigma = torch.diag(torch.tensor([0.001, 0.001, 0.001], dtype=torch.float32))
+    kl_divergence = None
+    
+    start_mu = torch.tensor(env.get_start_state(), dtype=torch.float32)
+    start_sigma = torch.diag(torch.tensor(env.get_start_covariance(), dtype=torch.float32))
     start_dist = torch.distributions.MultivariateNormal(start_mu, start_sigma)
+    
+    goal_states = env.get_goal_states()
+    goal_covs = env.get_goal_covariances()
+    if args.goal_distribution == 'gaussian':
+        if len(goal_states) > 1:
+            ui_util.print_error("\nMore than one goal found in env config, "
+                                "but Gaussian only takes one goal.\n")
+            sys.exit(1)
+        goal_mu = torch.tensor(goal_states[0], dtype=torch.float32)
+        goal_sigma = torch.diag(torch.tensor(goal_covs[0], dtype=torch.float32))
+        goal_dist = torch.distributions.MultivariateNormal(goal_mu, goal_sigma)
+    elif args.goal_distribution == 'gmm':
+        from kl_planning.models import GaussianMixture
+        goal_weights = env.get_goal_weights()
+        mus = torch.tensor(goal_states).unsqueeze(0)
+        sigmas = torch.tensor(goal_covs).unsqueeze(0)
+        n_components = mus.size(1)
+        n_features = mus.size(2)
+        goal_dist = GaussianMixture(n_components, n_features, mus, sigmas)
+        goal_dist.pi.data = torch.tensor(goal_weights).view(1, n_components, 1)
+        kl_divergence = math_util.kl_gmm_gmm
+    else:
+        ui_util.print_error(f"Unknown goal distribution type: {args.goal_distribution}")
+        sys.exit(0)
+            
 
-    goal_pos = env.indicator_config['goal2']['position']
-    goal_mu = torch.tensor([goal_pos[0], goal_pos[1], 0.0], dtype=torch.float32)
-    goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 1.0], dtype=torch.float32))
-    goal_dist = torch.distributions.MultivariateNormal(goal_mu, goal_sigma)
-
-    # Actions are wheel rotations which then induce delta x, y, theta
-    max_phi = 0.7
+    max_phi = 0.7  # Angular turn rate
+    min_v = 0.0    # Min linear velocity
+    max_v = 0.5    # Max linear velocity
     min_time = 0.
     max_time = 1.
     
-    min_act = torch.tensor([-np.tan(max_phi).astype(np.float32), min_time])
-    max_act = torch.tensor([np.tan(max_phi).astype(np.float32), max_time])
+    min_act = torch.tensor([-np.tan(max_phi).astype(np.float32), min_v, min_time])
+    max_act = torch.tensor([np.tan(max_phi).astype(np.float32), max_v, max_time])
 
-    state_size = goal_mu.size(-1)
+    state_size = start_mu.size(-1)
     
     env.set_agent_location(start_mu)
     
     for k in range(100):
-        act = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act, visualize=True)
+        act = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act,
+                               args.horizon, args.n_iters, args.n_candidates,
+                               args.n_elite, kl_divergence, visualize=True)
         
-        mus = [start_dist.loc.unsqueeze(0)]
-        sigmas = [start_dist.covariance_matrix.unsqueeze(0)]
+        # mus = [start_dist.loc.unsqueeze(0)]
+        # sigmas = [start_dist.covariance_matrix.unsqueeze(0)]
         
-        for t in range(len(act)):
-            act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * state_size + 1, 1)
-            act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
-            g = lambda x: env.dynamics(x, act_t)
-            mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[-1], sigmas[-1], g)
-            mus.append(mu_prime)
-            sigmas.append(sigma_prime)
+        # for t in range(len(act)):
+        #     act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * state_size + 1, 1)
+        #     act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
+        #     g = lambda x: env.dynamics(x, act_t)
+        #     mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[-1], sigmas[-1], g)
+        #     mus.append(mu_prime)
+        #     sigmas.append(sigma_prime)
 
         # Update current position for next planning step
         start_dist.loc = env.dynamics(start_dist.loc.unsqueeze(0), act[0].unsqueeze(0),
                                       noise_gain=args.dynamics_noise).squeeze()
         env.set_agent_location(start_dist.loc)
     
-        mus.append(goal_mu)
-        sigmas.append(goal_sigma)
+        # mus.append(goal_mu)
+        # sigmas.append(goal_sigma)
 
         # plot(mus, sigmas)
 
