@@ -4,6 +4,7 @@ import sys
 import yaml
 
 import rospy
+import rospkg
 from visualization_msgs.msg import MarkerArray
 
 from kl_planning.environments import Navigation2DEnvironment
@@ -53,8 +54,12 @@ class SceneManager:
 if __name__ == '__main__':
     rospy.init_node('create_scene')
     config_filename = rospy.get_param('~config_filename')
+    r = rospkg.RosPack()
+    path = r.get_path('kl_planning')
+    config_path = os.path.join(path, 'config', 'scenes', config_filename)
+    
     manager = SceneManager()
-    env = Navigation2DEnvironment(config_filename)
+    env = Navigation2DEnvironment(config_path)
     rospy.on_shutdown(manager.shutdown)
     manager.create_scene(env)
     manager.run()

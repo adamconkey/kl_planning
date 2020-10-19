@@ -109,9 +109,6 @@ class Navigation2DEnvironment:
             cost += 1 + lambda_ * (goal_dist.loc - trajs[t]).square().sum(dim=-1)
             # Collision cost
             cost += self.in_collision(trajs[t]) * 100.0
-
-
-            
         return cost
     
     def kl_cost(self, act, start_dist, goal_dist):
