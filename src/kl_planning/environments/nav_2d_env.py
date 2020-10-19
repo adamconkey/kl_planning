@@ -160,7 +160,7 @@ class Navigation2DEnvironment:
 
         return cost
 
-    def _create_collision_checkers(self, buffer_=0.2):
+    def _create_collision_checkers(self, buffer_=0.1):
         self.collision_checkers = {}
         for obj_id, obj_data in self.object_config.items():
             if obj_data['type'] == 'cube':

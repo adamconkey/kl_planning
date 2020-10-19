@@ -43,16 +43,19 @@ if __name__ == '__main__':
     # TODO for now this is just hard-coding some stuff to get running, will want
     # to make this all configurable
     
-    start_mu = torch.tensor([-1.5, 1.5, 0.0], dtype=torch.float32)
+    start_mu = torch.tensor([-3.5, 1.5, 0.0], dtype=torch.float32)
     start_sigma = torch.diag(torch.tensor([0.001, 0.001, 0.001], dtype=torch.float32))
 
-    goal_mu = torch.tensor([1.5, 1.5, 0.0], dtype=torch.float32)
+    goal_mu = torch.tensor([3.5, 1.5, 0.0], dtype=torch.float32)
     goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 1.0], dtype=torch.float32))
 
     # Actions are wheel rotations which then induce delta x, y, theta
-    phi_max = 1.
-    min_act = torch.tensor([-np.tan(phi_max).astype(np.float32), 0.])
-    max_act = torch.tensor([np.tan(phi_max).astype(np.float32), 1.])
+    max_phi = 0.7
+    min_time = 0.
+    max_time = 1.
+    
+    min_act = torch.tensor([-np.tan(max_phi).astype(np.float32), min_time])
+    max_act = torch.tensor([np.tan(max_phi).astype(np.float32), max_time])
 
     env.set_agent_location(start_mu)
     

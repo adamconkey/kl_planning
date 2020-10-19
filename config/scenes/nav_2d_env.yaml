@@ -1,7 +1,7 @@
 objects:
   north_wall:
     type: cube
-    length: 4
+    length: 8
     width: 4
     height: 0.1
     position:
@@ -21,7 +21,7 @@ objects:
       - 1
   south_wall:
     type: cube
-    length: 4
+    length: 8
     width: 4
     height: 0.1
     position:
@@ -45,7 +45,7 @@ objects:
     width: 12
     height: 0.1
     position:
-      - 4
+      - 6
       - 0
       - 0.05
     orientation:
@@ -65,7 +65,7 @@ objects:
     width: 12
     height: 0.1
     position:
-      - -4
+      - -6
       - 0
       - 0.05
     orientation:
@@ -81,11 +81,11 @@ objects:
       - 1
   obstacle:
     type: cube
-    length: 1.5
+    length: 4
     width: 1.5
     height: 0.1
     position:
-      - 0.25
+      - 1.
       - 0.75
       - 0.05
     orientation:
@@ -106,7 +106,7 @@ indicators:
     width: 0.25
     height: 0.0001
     position:
-      - -1.5
+      - -3.5
       - 1.5
       - 0
     orientation:
@@ -126,7 +126,7 @@ indicators:
     width: 0.25
     height: 0.0001
     position:
-      - 1.5
+      - 3.5
       - 1.5
       - 0
     orientation:
@@ -147,7 +147,7 @@ agents:
     width: 0.2
     height: 0.05
     position:
-      - -1.5
+      - -3.5
       - 1.5
       - 0.05
     orientation:
