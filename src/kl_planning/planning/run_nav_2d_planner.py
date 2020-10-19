@@ -35,6 +35,7 @@ def plot(mus, sigmas):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_filename', type=str, required=True)
+    parser.add_argument('--dynamics_noise', type=float, default=0.02)
     args = parser.parse_args()
     
     planner = Planner()
@@ -45,9 +46,11 @@ if __name__ == '__main__':
     
     start_mu = torch.tensor([-3.5, 1.5, 0.0], dtype=torch.float32)
     start_sigma = torch.diag(torch.tensor([0.001, 0.001, 0.001], dtype=torch.float32))
+    start_dist = torch.distributions.MultivariateNormal(start_mu, start_sigma)
 
     goal_mu = torch.tensor([3.5, 1.5, 0.0], dtype=torch.float32)
     goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 1.0], dtype=torch.float32))
+    goal_dist = torch.distributions.MultivariateNormal(goal_mu, goal_sigma)
 
     # Actions are wheel rotations which then induce delta x, y, theta
     max_phi = 0.7
@@ -57,17 +60,18 @@ if __name__ == '__main__':
     min_act = torch.tensor([-np.tan(max_phi).astype(np.float32), min_time])
     max_act = torch.tensor([np.tan(max_phi).astype(np.float32), max_time])
 
+    state_size = goal_mu.size(-1)
+    
     env.set_agent_location(start_mu)
     
     for k in range(100):
-        act = planner.plan_cem(env, start_mu, start_sigma, goal_mu, goal_sigma,
-                               min_act, max_act, visualize=True)
-
-        mus = [start_mu.unsqueeze(0)]
-        sigmas = [start_sigma.unsqueeze(0)]
+        act = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act, visualize=True)
+        
+        mus = [start_dist.loc.unsqueeze(0)]
+        sigmas = [start_dist.covariance_matrix.unsqueeze(0)]
         
         for t in range(len(act)):
-            act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * start_mu.size(-1) + 1, 1)
+            act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * state_size + 1, 1)
             act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
             g = lambda x: env.dynamics(x, act_t)
             mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[-1], sigmas[-1], g)
@@ -75,9 +79,9 @@ if __name__ == '__main__':
             sigmas.append(sigma_prime)
 
         # Update current position for next planning step
-        start_mu = env.dynamics(start_mu.unsqueeze(0), act[0].unsqueeze(0),
-                                noise_gain=0.0).squeeze()
-        env.set_agent_location(start_mu)
+        start_dist.loc = env.dynamics(start_dist.loc.unsqueeze(0), act[0].unsqueeze(0),
+                                      noise_gain=args.dynamics_noise).squeeze()
+        env.set_agent_location(start_dist.loc)
     
         mus.append(goal_mu)
         sigmas.append(goal_sigma)

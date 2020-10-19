@@ -101,12 +101,12 @@ class Navigation2DEnvironment:
         # print("FINAL", in_collision)
         return in_collision
 
-    def euclidean_cost(self, act, start_state, goal_state, lambda_=1.0, noise_gain=0.0):
+    def euclidean_cost(self, act, start_dist, goal_dist, lambda_=1.0, noise_gain=0.0):
         cost = 0
-        trajs = self.get_trajectory(start_state, act, noise_gain)[1:] # Exclude start state
+        trajs = self.get_trajectory(start_dist.loc, act, noise_gain)[1:] # Exclude start state
         for t in range(len(trajs)):
             # Euclidean distance cost to goal
-            cost += 1 + lambda_ * (goal_state - trajs[t]).square().sum(dim=-1)
+            cost += 1 + lambda_ * (goal_dist.loc - trajs[t]).square().sum(dim=-1)
             # Collision cost
             cost += self.in_collision(trajs[t]) * 100.0
 
@@ -114,13 +114,16 @@ class Navigation2DEnvironment:
             
         return cost
     
-    def kl_cost(self, act, start_mu, start_sigma, goal_mu, goal_sigma):
-        mus = [start_mu]
-        sigmas = [start_sigma]
+    def kl_cost(self, act, start_dist, goal_dist):
+        n_candidates = act.size(1)
+        mus = [start_dist.loc.repeat(n_candidates, 1)]
+        sigmas = [start_dist.covariance_matrix.repeat(n_candidates, 1, 1)]
         sigma_points = []
 
+        state_size = start_dist.loc.size(-1)
+
         for t in range(len(act)):
-            act_t = act[t].unsqueeze(1).repeat(1, 2 * start_mu.size(-1) + 1, 1)
+            act_t = act[t].unsqueeze(1).repeat(1, 2 * state_size + 1, 1)
             act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
             g = lambda x: self.dynamics(x, act_t)
             mu_prime, sigma_prime, Y = math_util.unscented_transform(mus[-1], sigmas[-1], g)
@@ -132,13 +135,12 @@ class Navigation2DEnvironment:
 
         # Compute KL cost from final distribution to goal distribution
         kl_cost = 0
-        p_G = MultivariateNormal(goal_mu, goal_sigma)
         T = len(mus)
         for t in range(T):
             # Increasing contribution of KL cost as time increases
             lambda_ = (t + 1) / float(T)
             p_t = MultivariateNormal(mus[t], sigmas[t])
-            kl_cost += lambda_ * kl_divergence(p_t, p_G)
+            kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
         cost += kl_cost
 
         # print("KL COST", kl_cost)
