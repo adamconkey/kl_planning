@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+import os
 import rospy
+import rospkg
 import torch
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -34,21 +36,28 @@ def plot(mus, sigmas):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_filename', type=str, required=True)
     parser.add_argument('--dynamics_noise', type=float, default=0.02)
     args = parser.parse_args()
+
+    scene = rospy.get_param("scene")
+    r = rospkg.RosPack()
+    path = r.get_path('kl_planning')
+    config_path = os.path.join(path, 'config', 'scenes', f"{scene}.yaml")
+    
     
     planner = Planner()
-    env = Navigation2DEnvironment(args.config_filename)
+    env = Navigation2DEnvironment(config_path)
     
     # TODO for now this is just hard-coding some stuff to get running, will want
     # to make this all configurable
-    
-    start_mu = torch.tensor([-3.5, 1.5, 0.0], dtype=torch.float32)
+
+    start_pos = env.indicator_config['start']['position']
+    start_mu = torch.tensor([start_pos[0], start_pos[1], 0.0], dtype=torch.float32)
     start_sigma = torch.diag(torch.tensor([0.001, 0.001, 0.001], dtype=torch.float32))
     start_dist = torch.distributions.MultivariateNormal(start_mu, start_sigma)
 
-    goal_mu = torch.tensor([3.5, 1.5, 0.0], dtype=torch.float32)
+    goal_pos = env.indicator_config['goal2']['position']
+    goal_mu = torch.tensor([goal_pos[0], goal_pos[1], 0.0], dtype=torch.float32)
     goal_sigma = torch.diag(torch.tensor([0.03, 0.03, 1.0], dtype=torch.float32))
     goal_dist = torch.distributions.MultivariateNormal(goal_mu, goal_sigma)
 

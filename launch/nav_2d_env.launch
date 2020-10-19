@@ -6,6 +6,8 @@
   <arg name="debug"       default="false"/>
 
   <!-- ===================================================================================== -->
+
+  <param name="scene" value="$(arg scene)"/>
   
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(arg rviz_config)"/>
 
