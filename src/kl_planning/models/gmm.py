@@ -1,7 +1,8 @@
 """
-All of this code is from: https://github.com/ldeecke/gmm-torch
+Most of this code is from: https://github.com/ldeecke/gmm-torch. I added a sampling function.
 """
 import torch
+from torch.distributions.multinomial import Multinomial
 import numpy as np
 
 from math import pi
@@ -196,6 +197,22 @@ class GaussianMixture(torch.nn.Module):
 
         score = self.__score(x, sum_data=False)
         return score
+
+
+    def sample(self, n_samples=1):
+        """
+        """
+        if self.n_components > 1:
+            component_counts = Multinomial(n_samples, self.pi.squeeze()).sample().tolist()
+            samples = []
+            for i in range(len(component_counts)):
+                noise = torch.randn(int(component_counts[i]), self.n_features)
+                samples.append(self.mu.squeeze()[i] + self.var.squeeze()[i] * noise)
+            samples = torch.cat(samples, dim=0)
+        else:
+            noise = torch.randn(n_samples, self.n_features)
+            samples = self.mu.squeeze() + self.var.squeeze() * noise
+        return samples
 
 
     def _estimate_log_prob(self, x):

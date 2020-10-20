@@ -1,7 +1,7 @@
 import sys
 import rospy
 import torch
-from torch.distributions import MultivariateNormal
+from torch.distributions import MultivariateNormal, Normal
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 from time import time
@@ -48,6 +48,12 @@ class Navigation2DEnvironment:
 
     def get_goal_weights(self):
         return [v['weight'] for v in self.goal_config.values()]
+
+    def get_goal_low_high(self):
+        """
+        This is for uniform distribution.
+        """
+        return self.goal_config['goal']['low'], self.goal_config['goal']['high']
         
     def set_agent_location(self, pose):
         req = SetPoseRequest()
@@ -110,11 +116,7 @@ class Navigation2DEnvironment:
         in_collision = torch.zeros(q.size(0), dtype=torch.bool)
         for obj_id, checker in self.collision_checkers.items():
             obj_in_collision = checker(q)
-
-            # print(obj_id, obj_in_collision)
-            
             in_collision += obj_in_collision  # Boolean OR operation
-        # print("FINAL", in_collision)
         return in_collision
 
     def euclidean_cost(self, act, start_dist, goal_dist, lambda_=1.0, noise_gain=0.0):
@@ -127,7 +129,7 @@ class Navigation2DEnvironment:
             cost += self.in_collision(trajs[t]) * 100.0
         return cost
     
-    def kl_cost(self, act, start_dist, goal_dist, kl_divergence=None):
+    def kl_cost(self, act, start_dist, goal_dist, kl_divergence=None, m_projection=True):
         if kl_divergence is None:
             kl_divergence = torch.distributions.kl.kl_divergence
 
@@ -157,27 +159,30 @@ class Navigation2DEnvironment:
         for t in range(T):
             # Increasing contribution of KL cost as time increases
             lambda_ = (t + 1) / float(T)
-            p_t = MultivariateNormal(mus[t], sigmas[t])
-            kl_cost += lambda_ * kl_divergence(p_t, goal_dist, n_candidates) # I-projection
-            # kl_cost += lambda_ * kl_divergence(goal_dist, p_t, n_candidates) # M-projection
+            # p_t = MultivariateNormal(mus[t], sigmas[t])
+            p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1))
+            if m_projection:
+                kl_cost_t = lambda_ * kl_divergence(goal_dist, p_t)
+                if kl_cost_t.ndim == 2:
+                    # Needed for uniform
+                    kl_cost_t = kl_cost_t.sum(dim=-1)
+                kl_cost += kl_cost_t / 1000.0  # TODO having to scale because it's so huge for uni
+            else:
+                kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
         cost += kl_cost
-
-        # print("KL COST", kl_cost)
             
         # Compute collision costs based on sigma points
         collision_cost = 0
         n_points = float(len(sigma_points))
         for i, Y in enumerate(sigma_points):
-            # Decreasing contribution of collision cost as time increases
-            lambda_ = (n_points - i) / n_points
+            # # Decreasing contribution of collision cost as time increases
+            # lambda_ = (n_points - i) / n_points
             B = Y.size(0)
             n_sigma = Y.size(1)
             in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 100.0
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += in_collision.sum(dim=1)
         cost += collision_cost
-
-        # print("COST", cost)
 
         return cost
 

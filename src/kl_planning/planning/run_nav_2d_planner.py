@@ -39,11 +39,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dynamics_noise', type=float, default=0.02)
     parser.add_argument('--goal_distribution', type=str, default='gaussian',
+                        choices=['gaussian', 'gmm', 'uniform'])
+    parser.add_argument('--cem_distribution', type=str, default='gaussian',
                         choices=['gaussian', 'gmm'])
     parser.add_argument('--horizon', type=int, default=10)
     parser.add_argument('--n_iters', type=int, default=10)
     parser.add_argument('--n_candidates', type=int, default=100)
     parser.add_argument('--n_elite', type=int, default=10)
+    parser.add_argument('--n_cem_gmm_components', type=int, default=2)
     args = parser.parse_args()
 
     scene = rospy.get_param("scene")
@@ -61,9 +64,9 @@ if __name__ == '__main__':
     start_sigma = torch.diag(torch.tensor(env.get_start_covariance(), dtype=torch.float32))
     start_dist = torch.distributions.MultivariateNormal(start_mu, start_sigma)
     
-    goal_states = env.get_goal_states()
-    goal_covs = env.get_goal_covariances()
     if args.goal_distribution == 'gaussian':
+        goal_states = env.get_goal_states()
+        goal_covs = env.get_goal_covariances()
         if len(goal_states) > 1:
             ui_util.print_error("\nMore than one goal found in env config, "
                                 "but Gaussian only takes one goal.\n")
@@ -73,6 +76,8 @@ if __name__ == '__main__':
         goal_dist = torch.distributions.MultivariateNormal(goal_mu, goal_sigma)
     elif args.goal_distribution == 'gmm':
         from kl_planning.models import GaussianMixture
+        goal_states = env.get_goal_states()
+        goal_covs = env.get_goal_covariances()
         goal_weights = env.get_goal_weights()
         mus = torch.tensor(goal_states).unsqueeze(0)
         sigmas = torch.tensor(goal_covs).unsqueeze(0)
@@ -81,6 +86,10 @@ if __name__ == '__main__':
         goal_dist = GaussianMixture(n_components, n_features, mus, sigmas)
         goal_dist.pi.data = torch.tensor(goal_weights).view(1, n_components, 1)
         kl_divergence = math_util.kl_gmm_gmm
+    elif args.goal_distribution == 'uniform':
+        from torch.distributions.uniform import Uniform
+        lows, highs = env.get_goal_low_high()
+        goal_dist = Uniform(torch.tensor(lows), torch.tensor(highs))
     else:
         ui_util.print_error(f"Unknown goal distribution type: {args.goal_distribution}")
         sys.exit(0)
@@ -102,7 +111,8 @@ if __name__ == '__main__':
     for k in range(100):
         act = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act,
                                args.horizon, args.n_iters, args.n_candidates,
-                               args.n_elite, kl_divergence, visualize=True)
+                               args.n_elite, args.n_cem_gmm_components,
+                               kl_divergence, args.cem_distribution, visualize=True)
         
         # mus = [start_dist.loc.unsqueeze(0)]
         # sigmas = [start_dist.covariance_matrix.unsqueeze(0)]

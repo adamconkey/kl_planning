@@ -79,114 +79,14 @@ objects:
       - 0
       - 1
       - 1
-  divider_wall1:
+  obstacle:
     type: cube
-    length: 1.33
-    width: 0.1
+    length: 1
+    width: 1
     height: 0.1
     position:
-      - 1.33
-      - 0.67
-      - 0.05
-    orientation:
       - 0
       - 0
-      - 0
-      - 1
-    parent_frame: world
-    color:
-      - 0
-      - 0
-      - 1
-      - 1
-  divider_wall2:
-    type: cube
-    length: 1.33
-    width: 0.1
-    height: 0.1
-    position:
-      - 1.33
-      - -0.67
-      - 0.05
-    orientation:
-      - 0
-      - 0
-      - 0
-      - 1
-    parent_frame: world
-    color:
-      - 0
-      - 0
-      - 1
-      - 1
-  divider_cap1:
-    type: cube
-    length: 0.1
-    width: 0.67
-    height: 0.1
-    position:
-      - 0.67
-      - 2
-      - 0.05
-    orientation:
-      - 0
-      - 0
-      - 0
-      - 1
-    parent_frame: world
-    color:
-      - 0
-      - 0
-      - 1
-      - 1
-  divider_cap2:
-    type: cube
-    length: 0.1
-    width: 0.67
-    height: 0.1
-    position:
-      - 0.67
-      - 0.67
-      - 0.05
-    orientation:
-      - 0
-      - 0
-      - 0
-      - 1
-    parent_frame: world
-    color:
-      - 0
-      - 0
-      - 1
-      - 1
-  divider_cap3:
-    type: cube
-    length: 0.1
-    width: 0.67
-    height: 0.1
-    position:
-      - 0.67
-      - -0.67
-      - 0.05
-    orientation:
-      - 0
-      - 0
-      - 0
-      - 1
-    parent_frame: world
-    color:
-      - 0
-      - 0
-      - 1
-      - 1
-  divider_cap4:
-    type: cube
-    length: 0.1
-    width: 0.67
-    height: 0.1
-    position:
-      - 0.67
-      - -2
       - 0.05
     orientation:
       - 0
@@ -220,34 +120,14 @@ indicators:
       - 0
       - 0
       - 1
-  goal1:
+  goal:
     type: cylinder
     length: 0.25
     width: 0.25
     height: 0.0001
     position:
       - 1.5
-      - 1.5
       - 0
-    orientation:
-      - 0
-      - 0
-      - 0
-      - 1
-    parent_frame: world
-    color:
-      - 0
-      - 1
-      - 0
-      - 1
-  goal2:
-    type: cylinder
-    length: 0.25
-    width: 0.25
-    height: 0.0001
-    position:
-      - 1.5
-      - -1.5
       - 0
     orientation:
       - 0
@@ -292,23 +172,12 @@ start:
     - 0.001  # y
     - 0.001  # theta
 goals:
-  goal1:
+  goal:
     state:
       - 1.5  # x
-      - 1.5  # y
+      - 0    # y
       - 0    # theta
     covariance:
       - 0.03
       - 0.03
       - 1.0
-    weight: 0.5
-  goal2:
-    state:
-      - 1.5   # x
-      - -1.5  # y
-      - 0     # theta
-    covariance:
-      - 0.03
-      - 0.03
-      - 1.0
-    weight: 0.5

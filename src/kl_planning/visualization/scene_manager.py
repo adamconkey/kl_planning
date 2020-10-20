@@ -54,6 +54,8 @@ class SceneManager:
     def _add_goal_text_markers(self):
         marker_id = 1234
         for goal_id, goal_data in self.env.goal_config.items():
+            if 'weight' not in goal_data:
+                continue
             text_data = {
                 'type': 'text',
                 'text': str(goal_data['weight']),
