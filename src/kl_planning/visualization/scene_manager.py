@@ -8,7 +8,7 @@ import rospkg
 from visualization_msgs.msg import MarkerArray
 
 from kl_planning.environments import Navigation2DEnvironment
-from kl_planning.util import ros_util
+from kl_planning.util import ros_util, file_util
 from kl_planning.srv import SetPose, SetPoseResponse
 
 
@@ -31,7 +31,7 @@ class SceneManager:
         self.scene_msg = ros_util.get_marker_array_msg(env.object_config)
         self.start_goal_msg = ros_util.get_marker_array_msg(env.indicator_config)
         self._add_goal_text_markers()
-        self.agent_msg = ros_util.get_marker_array_msg(env.agent_config)
+        self.agent_msg = ros_util.get_marker_array_msg({'agent': env.agent_config})
                 
     def run(self):
         rospy.loginfo("Visualizing scene")
@@ -77,9 +77,11 @@ if __name__ == '__main__':
     r = rospkg.RosPack()
     path = r.get_path('kl_planning')
     config_path = os.path.join(path, 'config', 'scenes', config_filename)
-    
+    file_util.check_path_exists(config_path, "Scene configuration file")
+    config = file_util.load_yaml(config_path)
+
     manager = SceneManager()
-    env = Navigation2DEnvironment(config_path)
+    env = Navigation2DEnvironment(config)
     rospy.on_shutdown(manager.shutdown)
     manager.create_scene(env)
     manager.run()

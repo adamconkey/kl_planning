@@ -12,27 +12,16 @@ from kl_planning.srv import SetPose, SetPoseRequest
 
 class Navigation2DEnvironment:
 
-    def __init__(self, config_filename):
-        file_util.check_path_exists(config_filename, "Scene configuration file")
-        scene_config = file_util.load_yaml(config_filename)
-        self.object_config = scene_config['objects']
-        self.agent_config = scene_config['agents']
-        self.indicator_config = scene_config['indicators']
-        self.start_config = scene_config['start']
-        self.goal_config = scene_config['goals']
+    def __init__(self, config, m_projection=False):
+        self.object_config = config['objects']
+        self.agent_config = config['agent']
+        self.indicator_config = config['indicators']
+        self.start_config = config['start']
+        self.goal_config = config['goals']
 
-        self.wheel_radius = self.agent_config['agent']['wheel_radius']
-        self.robot_length = self.agent_config['agent']['length']
+        self.m_projection = m_projection
         
         self._create_collision_checkers()
-
-        # These save some lookups/computations in collision check
-        L = self.agent_config['agent']['length']
-        W = self.agent_config['agent']['width']
-        self.p0 = np.array([-L / 2., W / 2.])
-        self.p1 = self.p0 + np.array([L, 0])
-        self.p2 = self.p1 + np.array([0, -W])
-        self.p3 = self.p2 + np.array([-L, 0])
 
     def get_start_state(self):
         return self.start_config['state']
@@ -129,7 +118,7 @@ class Navigation2DEnvironment:
             cost += self.in_collision(trajs[t]) * 100.0
         return cost
     
-    def kl_cost(self, act, start_dist, goal_dist, kl_divergence=None, m_projection=True):
+    def kl_cost(self, act, start_dist, goal_dist, kl_divergence=None):
         if kl_divergence is None:
             kl_divergence = torch.distributions.kl.kl_divergence
 
@@ -159,14 +148,15 @@ class Navigation2DEnvironment:
         for t in range(T):
             # Increasing contribution of KL cost as time increases
             lambda_ = (t + 1) / float(T)
-            # p_t = MultivariateNormal(mus[t], sigmas[t])
-            p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1))
-            if m_projection:
+            p_t = MultivariateNormal(mus[t], sigmas[t])
+            # p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1))
+            if self.m_projection:
                 kl_cost_t = lambda_ * kl_divergence(goal_dist, p_t)
                 if kl_cost_t.ndim == 2:
                     # Needed for uniform
                     kl_cost_t = kl_cost_t.sum(dim=-1)
-                kl_cost += kl_cost_t / 1000.0  # TODO having to scale because it's so huge for uni
+                # kl_cost += kl_cost_t / 1000.0  # TODO having to scale because it's so huge for uni
+                kl_cost += kl_cost_t
             else:
                 kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
         cost += kl_cost

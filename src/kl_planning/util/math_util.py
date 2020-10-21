@@ -55,7 +55,7 @@ def unscented_transform(mu, sigma, g, alpha=1, beta=2, kappa=1):
     return mu_prime, sigma_prime, Y
 
 
-def kl_gmm_gmm(p, q, B):
+def kl_gmm_gmm(p, q):
     """
     Computes approximate KL divergence between two GMMs. Either arg can be either 
     MultivariateNormal or GaussianMixture, and if any are MVN they get treated as
@@ -63,11 +63,18 @@ def kl_gmm_gmm(p, q, B):
 
     Uses unscented transform as more efficient alternative to sampling. Method described in:
       [1] https://www.isca-speech.org/archive/archive_papers/interspeech_2005/i05_1985.pdf
-
-
-    TODO: figure out best way to robustly get batch size, right now a little hacked
-          so just passing in
     """
+    # TODO Need to figure out batch size, assuming at least one is MVN which has batch,
+    # if you need general GMM-GMM then maybe need to figure out batch version of that
+    if isinstance(p, MultivariateNormal):
+        B = p.loc.size(0)
+    elif isinstance(q, MultivariateNormal):
+        B = q.loc.size(0)
+    else:
+        ui_util.print_error("\nNone of the dists are MVN, cannot infer batch")
+        return None
+    
+    
     if isinstance(p, MultivariateNormal):
         mus = p.loc.unsqueeze(0)
         sigmas = p.covariance_matrix.unsqueeze(0)

@@ -15,7 +15,7 @@ from math import pi
 
 from kl_planning.planning import Planner
 from kl_planning.environments import Navigation2DEnvironment
-from kl_planning.util import ros_util, math_util, ui_util
+from kl_planning.util import ros_util, math_util, ui_util, file_util
 from kl_planning.srv import DisplayImage, DisplayImageRequest
 
 
@@ -38,25 +38,27 @@ def plot(mus, sigmas):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dynamics_noise', type=float, default=0.02)
-    parser.add_argument('--goal_distribution', type=str, default='gaussian',
-                        choices=['gaussian', 'gmm', 'uniform'])
     parser.add_argument('--cem_distribution', type=str, default='gaussian',
                         choices=['gaussian', 'gmm'])
     parser.add_argument('--horizon', type=int, default=10)
     parser.add_argument('--n_iters', type=int, default=10)
-    parser.add_argument('--n_candidates', type=int, default=100)
-    parser.add_argument('--n_elite', type=int, default=10)
+    parser.add_argument('--n_candidates', type=int, default=200)
+    parser.add_argument('--n_elite', type=int, default=20)
     parser.add_argument('--n_cem_gmm_components', type=int, default=2)
+    parser.add_argument('--m_projection', action='store_true')
     args = parser.parse_args()
 
+    # Load config that stores all scene and distribution information
     scene = rospy.get_param("scene")
     r = rospkg.RosPack()
     path = r.get_path('kl_planning')
-    config_path = os.path.join(path, 'config', 'scenes', f"{scene}.yaml")
-    
+    config_path = os.path.join(path, 'config', 'scenes', 'nav_2d', f"{scene}.yaml")
+    file_util.check_path_exists(config_path, "Scene configuration file")
+    config = file_util.load_yaml(config_path)
+
     
     planner = Planner()
-    env = Navigation2DEnvironment(config_path)
+    env = Navigation2DEnvironment(config, args.m_projection)
     
     kl_divergence = None
     
@@ -64,7 +66,7 @@ if __name__ == '__main__':
     start_sigma = torch.diag(torch.tensor(env.get_start_covariance(), dtype=torch.float32))
     start_dist = torch.distributions.MultivariateNormal(start_mu, start_sigma)
     
-    if args.goal_distribution == 'gaussian':
+    if config['goal_distribution'] == 'gaussian':
         goal_states = env.get_goal_states()
         goal_covs = env.get_goal_covariances()
         if len(goal_states) > 1:
@@ -74,7 +76,7 @@ if __name__ == '__main__':
         goal_mu = torch.tensor(goal_states[0], dtype=torch.float32)
         goal_sigma = torch.diag(torch.tensor(goal_covs[0], dtype=torch.float32))
         goal_dist = torch.distributions.MultivariateNormal(goal_mu, goal_sigma)
-    elif args.goal_distribution == 'gmm':
+    elif config['goal_distribution'] == 'gmm':
         from kl_planning.models import GaussianMixture
         goal_states = env.get_goal_states()
         goal_covs = env.get_goal_covariances()
@@ -86,7 +88,7 @@ if __name__ == '__main__':
         goal_dist = GaussianMixture(n_components, n_features, mus, sigmas)
         goal_dist.pi.data = torch.tensor(goal_weights).view(1, n_components, 1)
         kl_divergence = math_util.kl_gmm_gmm
-    elif args.goal_distribution == 'uniform':
+    elif config['goal_distribution'] == 'uniform':
         from torch.distributions.uniform import Uniform
         lows, highs = env.get_goal_low_high()
         goal_dist = Uniform(torch.tensor(lows), torch.tensor(highs))
@@ -94,15 +96,11 @@ if __name__ == '__main__':
         ui_util.print_error(f"Unknown goal distribution type: {args.goal_distribution}")
         sys.exit(0)
             
-
-    max_phi = 0.7  # Angular turn rate
-    min_v = 0.0    # Min linear velocity
-    max_v = 0.5    # Max linear velocity
-    min_time = 0.
-    max_time = 1.
     
-    min_act = torch.tensor([-np.tan(max_phi).astype(np.float32), min_v, min_time])
-    max_act = torch.tensor([np.tan(max_phi).astype(np.float32), max_v, max_time])
+    min_act = torch.tensor([-np.tan(config['agent']['max_phi']).astype(np.float32),
+                            config['agent']['min_v'], config['agent']['min_time']])
+    max_act = torch.tensor([np.tan(config['agent']['max_phi']).astype(np.float32),
+                            config['agent']['max_v'], config['agent']['max_time']])
 
     state_size = start_mu.size(-1)
     

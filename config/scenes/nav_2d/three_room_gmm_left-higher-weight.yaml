@@ -1,0 +1,318 @@
+objects:
+  north_wall:
+    type: cube
+    length: 4
+    width: 4
+    height: 0.1
+    position:
+      - 0
+      - 4
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  south_wall:
+    type: cube
+    length: 4
+    width: 4
+    height: 0.1
+    position:
+      - 0
+      - -4
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  east_wall:
+    type: cube
+    length: 4
+    width: 12
+    height: 0.1
+    position:
+      - 4
+      - 0
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  west_wall:
+    type: cube
+    length: 4
+    width: 12
+    height: 0.1
+    position:
+      - -4
+      - 0
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  divider_wall1:
+    type: cube
+    length: 1.33
+    width: 0.1
+    height: 0.1
+    position:
+      - 1.33
+      - 0.67
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  divider_wall2:
+    type: cube
+    length: 1.33
+    width: 0.1
+    height: 0.1
+    position:
+      - 1.33
+      - -0.67
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  divider_cap1:
+    type: cube
+    length: 0.1
+    width: 0.67
+    height: 0.1
+    position:
+      - 0.67
+      - 2
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  divider_cap2:
+    type: cube
+    length: 0.1
+    width: 0.67
+    height: 0.1
+    position:
+      - 0.67
+      - 0.67
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  divider_cap3:
+    type: cube
+    length: 0.1
+    width: 0.67
+    height: 0.1
+    position:
+      - 0.67
+      - -0.67
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+  divider_cap4:
+    type: cube
+    length: 0.1
+    width: 0.67
+    height: 0.1
+    position:
+      - 0.67
+      - -2
+      - 0.05
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 0
+      - 1
+      - 1
+indicators:
+  start:
+    type: cylinder
+    length: 0.25
+    width: 0.25
+    height: 0.0001
+    position:
+      - -1.5
+      - 0
+      - 0
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 1
+      - 0
+      - 0
+      - 1
+  goal1:
+    type: cylinder
+    length: 0.25
+    width: 0.25
+    height: 0.0001
+    position:
+      - 1.5
+      - 1.5
+      - 0
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 1
+      - 0
+      - 1
+  goal2:
+    type: cylinder
+    length: 0.25
+    width: 0.25
+    height: 0.0001
+    position:
+      - 1.5
+      - -1.5
+      - 0
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 1
+      - 0
+      - 1
+agent:
+  type: cube
+  length: 0.2
+  width: 0.2
+  height: 0.05
+  position:
+    - -1.5
+    - 0
+    - 0.05
+  orientation:
+    - 0
+    - 0
+    - 0
+    - 1
+  parent_frame: world
+  color:
+    - 0.23
+    - 0.23
+    - 0.23
+    - 1
+  max_phi: 0.7   # Angular turn rate
+  min_v: 0.0     # Min linear velocity
+  max_v: 0.5     # Max linear velocity
+  min_time: 0.0  # Min duration to apply action
+  max_time: 1.0  # Max duration to apply action
+start:
+  state:
+    - -1.5  # x
+    - 0    # y
+    - 0    # theta
+  covariance:
+    - 0.001  # x
+    - 0.001  # y
+    - 0.001  # theta
+goals:
+  goal1:
+    state:
+      - 1.5  # x
+      - 1.5  # y
+      - 0    # theta
+    covariance:
+      - 0.03
+      - 0.03
+      - 1.0
+    weight: 0.8
+  goal2:
+    state:
+      - 1.5   # x
+      - -1.5  # y
+      - 0     # theta
+    covariance:
+      - 0.03
+      - 0.03
+      - 1.0
+    weight: 0.2
+goal_distribution: gmm

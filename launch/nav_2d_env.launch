@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <launch>
 
-  <arg name="scene"       default="nav_2d_hallway_env"/>
-  <arg name="rviz_config" default="$(find kl_planning)/config/rviz/$(arg scene).rviz"/>
+  <arg name="scene"/>
+  <arg name="rviz_config" default="$(find kl_planning)/config/rviz/nav_2d.rviz"/>
   <arg name="debug"       default="false"/>
 
   <!-- ===================================================================================== -->
@@ -12,7 +12,7 @@
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(arg rviz_config)"/>
 
   <node name="scene_manager" pkg="kl_planning" type="scene_manager.py" output="screen">
-    <param name="config_filename" value="$(arg scene).yaml"/>
+    <param name="config_filename" value="nav_2d/$(arg scene).yaml"/>
   </node>
 
   <node name="world_frame_publisher" pkg="tf" type="static_transform_publisher"
