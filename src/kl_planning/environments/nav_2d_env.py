@@ -12,14 +12,16 @@ from kl_planning.srv import SetPose, SetPoseRequest
 
 class Navigation2DEnvironment:
 
-    def __init__(self, config, m_projection=False):
+    def __init__(self, config, m_projection=False, belief_dynamics_noise=0.02):
         self.object_config = config['objects']
         self.agent_config = config['agent']
         self.indicator_config = config['indicators']
         self.start_config = config['start']
         self.goal_config = config['goals']
+        self.state_size = len(self.start_config['state'])
 
         self.m_projection = m_projection
+        self.belief_dynamics_noise = belief_dynamics_noise
         
         self._create_collision_checkers()
 
@@ -71,7 +73,7 @@ class Navigation2DEnvironment:
         """
         # Adding small value so it doesn't divide by zero, this avoids having to do boolean
         # check on all values, will get washed out in noisy dynamics anyways
-        u = act[:,0] + 1e-5
+        u = act[:,0] + 1e-8
         v = act[:,1]
         dt = act[:,2]
         dt_u = dt * u
@@ -134,7 +136,7 @@ class Navigation2DEnvironment:
         for t in range(len(act)):
             act_t = act[t].unsqueeze(1).repeat(1, 2 * state_size + 1, 1)
             act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
-            g = lambda x: self.dynamics(x, act_t)
+            g = lambda x: self.dynamics(x, act_t, self.belief_dynamics_noise)
             mu_prime, sigma_prime, Y = math_util.unscented_transform(mus[-1], sigmas[-1], g)
             mus.append(mu_prime)
             sigmas.append(sigma_prime)
@@ -152,10 +154,9 @@ class Navigation2DEnvironment:
             # p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1))
             if self.m_projection:
                 kl_cost_t = lambda_ * kl_divergence(goal_dist, p_t)
-                if kl_cost_t.ndim == 2:
-                    # Needed for uniform
-                    kl_cost_t = kl_cost_t.sum(dim=-1)
-                # kl_cost += kl_cost_t / 1000.0  # TODO having to scale because it's so huge for uni
+                if isinstance(goal_dist, torch.distributions.uniform.Uniform):
+                    # TODO scaling because uniform is huge, maybe parameterize this
+                    kl_cost_t = kl_cost_t.sum(dim=-1) / 1000.0
                 kl_cost += kl_cost_t
             else:
                 kl_cost += lambda_ * kl_divergence(p_t, goal_dist)

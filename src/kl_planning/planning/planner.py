@@ -5,7 +5,7 @@ import torch
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from kl_planning.models import GaussianMixture
+from kl_planning.distributions import GaussianMixture
 from kl_planning.util import vis_util, ui_util
 
 

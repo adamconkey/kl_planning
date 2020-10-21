@@ -37,15 +37,19 @@ def plot(mus, sigmas):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dynamics_noise', type=float, default=0.02)
+    parser.add_argument('--real_dynamics_noise', type=float, default=0.02)
+    parser.add_argument('--real_observation_noise', type=float, nargs='+', default=[0.001])
+    parser.add_argument('--belief_dynamics_noise', type=float, default=0.02)
+    parser.add_argument('--belief_observation_noise', type=float, nargs='+', default=[0.001])
     parser.add_argument('--cem_distribution', type=str, default='gaussian',
                         choices=['gaussian', 'gmm'])
     parser.add_argument('--horizon', type=int, default=10)
     parser.add_argument('--n_iters', type=int, default=10)
     parser.add_argument('--n_candidates', type=int, default=200)
-    parser.add_argument('--n_elite', type=int, default=20)
+    parser.add_argument('--n_elite', type=int, default=10)
     parser.add_argument('--n_cem_gmm_components', type=int, default=2)
     parser.add_argument('--m_projection', action='store_true')
+    parser.add_argument('--force_dirac_identity_precision', action='store_true')
     args = parser.parse_args()
 
     # Load config that stores all scene and distribution information
@@ -56,14 +60,30 @@ if __name__ == '__main__':
     file_util.check_path_exists(config_path, "Scene configuration file")
     config = file_util.load_yaml(config_path)
 
+    m_projection = config['m_projection'] if 'm_projection' in config else args.m_projection
     
     planner = Planner()
-    env = Navigation2DEnvironment(config, args.m_projection)
+    env = Navigation2DEnvironment(config, m_projection, args.belief_dynamics_noise)
     
     kl_divergence = None
-    
-    start_mu = torch.tensor(env.get_start_state(), dtype=torch.float32)
-    start_sigma = torch.diag(torch.tensor(env.get_start_covariance(), dtype=torch.float32))
+
+    # TODO real observation noise isn't being used yet, but can add in if you use a
+    # real observation model to give agent noisy samples of the true state
+    # if len(args.real_observation_noise) == 1:
+    #     real_observation_noise = torch.ones(env.state_size) * args.real_observation_noise[0]
+    # else:
+    #     real_observation_noise = torch.tensor(args.real_observation_noise)
+
+    if len(args.belief_observation_noise) == 1:
+        belief_observation_noise = torch.ones(env.state_size) * args.belief_observation_noise[0]
+    else:
+        belief_observation_noise = torch.tensor(args.belief_observation_noise)
+
+    true_state = torch.tensor(env.get_start_state(), dtype=torch.float32)
+
+    # TODO for now just taking true state as mean, can explore noisy sample instead later
+    start_mu = true_state
+    start_sigma = torch.diag(belief_observation_noise)
     start_dist = torch.distributions.MultivariateNormal(start_mu, start_sigma)
     
     if config['goal_distribution'] == 'gaussian':
@@ -77,7 +97,7 @@ if __name__ == '__main__':
         goal_sigma = torch.diag(torch.tensor(goal_covs[0], dtype=torch.float32))
         goal_dist = torch.distributions.MultivariateNormal(goal_mu, goal_sigma)
     elif config['goal_distribution'] == 'gmm':
-        from kl_planning.models import GaussianMixture
+        from kl_planning.distributions import GaussianMixture
         goal_states = env.get_goal_states()
         goal_covs = env.get_goal_covariances()
         goal_weights = env.get_goal_weights()
@@ -92,6 +112,12 @@ if __name__ == '__main__':
         from torch.distributions.uniform import Uniform
         lows, highs = env.get_goal_low_high()
         goal_dist = Uniform(torch.tensor(lows), torch.tensor(highs))
+    elif config['goal_distribution'] == 'dirac_delta':
+        from kl_planning.distributions import DiracDelta
+        goal_state = torch.tensor(env.get_goal_states()[0])
+        goal_state = goal_state.unsqueeze(0).repeat(args.n_candidates, 1)
+        goal_dist = DiracDelta(goal_state, args.force_dirac_identity_precision)
+        kl_divergence = math_util.kl_dirac_mvn
     else:
         ui_util.print_error(f"Unknown goal distribution type: {args.goal_distribution}")
         sys.exit(0)
@@ -104,9 +130,9 @@ if __name__ == '__main__':
 
     state_size = start_mu.size(-1)
     
-    env.set_agent_location(start_mu)
-    
     for k in range(100):
+        env.set_agent_location(true_state)
+        
         act = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act,
                                args.horizon, args.n_iters, args.n_candidates,
                                args.n_elite, args.n_cem_gmm_components,
@@ -123,11 +149,21 @@ if __name__ == '__main__':
         #     mus.append(mu_prime)
         #     sigmas.append(sigma_prime)
 
+
+        # TODO need to update dynamics so that you separately update belief and true dynamics
+        # by passing them through both functions with respective noise. I think you want to add
+        # yet another noise parameter so you can maintain observation noise to mimic noisy sensor
+        # for initial state distribution. Can do no-op action on current state 
+
+        
         # Update current position for next planning step
-        start_dist.loc = env.dynamics(start_dist.loc.unsqueeze(0), act[0].unsqueeze(0),
-                                      noise_gain=args.dynamics_noise).squeeze()
-        env.set_agent_location(start_dist.loc)
-    
+        true_state = env.dynamics(true_state.unsqueeze(0), act[0].unsqueeze(0),
+                                  noise_gain=args.real_dynamics_noise).squeeze()
+        
+        # TODO for now just taking true state as mean, probably more correct to have a noisy
+        # observation function and then let the agent use an observation model in planning.
+        start_dist.loc = true_state
+        
         # mus.append(goal_mu)
         # sigmas.append(goal_sigma)
 

@@ -2,7 +2,7 @@ import sys
 import torch
 from torch.distributions.multivariate_normal import MultivariateNormal
 
-from kl_planning.models import GaussianMixture
+from kl_planning.distributions import GaussianMixture, DiracDelta
 from kl_planning.util import ui_util
 
 
@@ -71,10 +71,9 @@ def kl_gmm_gmm(p, q):
     elif isinstance(q, MultivariateNormal):
         B = q.loc.size(0)
     else:
-        ui_util.print_error("\nNone of the dists are MVN, cannot infer batch")
-        return None
-    
-    
+        raise TypeError("None of the dists are MVN, cannot infer batch")
+
+    # Handle MVN/GMM for first arg, can be either
     if isinstance(p, MultivariateNormal):
         mus = p.loc.unsqueeze(0)
         sigmas = p.covariance_matrix.unsqueeze(0)
@@ -84,12 +83,7 @@ def kl_gmm_gmm(p, q):
         sigmas = torch.diag_embed(p.var_init.squeeze()).unsqueeze(1).repeat(1, B, 1, 1) # (k, b, n, n)
         weights = p.pi.squeeze()
     else:
-        ui_util.print_error("\nUnknown distribution type for first arg to KL gmm-gmm\n")
-        return None
-
-    # print("MUS", mus.shape)
-    # print("SIGMAS", sigmas.shape)
-    # print("WEIGHTS", weights.shape)
+        raise TypeError("Unknown distribution type for first arg to KL gmm-gmm")
 
     n = mus.size(-1)
     n_components = len(weights)
@@ -115,8 +109,37 @@ def kl_gmm_gmm(p, q):
         kl_approx[k] = weights[k] * (p_log_p - p_log_q.squeeze())
 
     kl_approx = kl_approx.sum(dim=0) # Sum over components
-        
-    # print("KL", kl_approx)
-    # sys.exit()
 
     return kl_approx
+
+
+def kl_dirac_mvn(dirac, mvn):
+    """
+    Computes KL divergence between DiracDelta and MultivariateNormal.
+
+    Solving you get -log(q(x)) which for MVN reduces to a constant plus 
+    precision-weighted Euclidean distance. 
+
+    Note this computes the M-projection where the MVN is the one you have 
+    some control over. The I-projection is infinite because it puts the 
+    dirac in the denominator of the log in KL which is zero everywhere 
+    except one point, causing division by zero and it's infinite.
+    """
+    if not isinstance(dirac, DiracDelta):
+        raise TypeError("First arg must be type DiracDelta")
+    if not isinstance(mvn, MultivariateNormal):
+        raise TypeError("Second arg must be type MultivariateNormal")
+    if dirac.state.shape != mvn.loc.shape:
+        raise ValueError(f"Dirac state shape {dirac.state.shape} "
+                         f"must match MVN mean shape {mvn.loc.shape}")
+
+    if dirac.force_identity_precision:
+        precision = torch.eye(mvn.loc.size(-1)).unsqueeze(0).repeat(mvn.loc.size(0), 1, 1)
+    else:
+        precision = mvn.precision_matrix
+
+    diff = dirac.state - mvn.loc
+    t1 = torch.bmm(diff.unsqueeze(1), precision)
+    kl = 0.5 * torch.bmm(t1, diff.unsqueeze(-1))
+    return kl.squeeze()
+    
