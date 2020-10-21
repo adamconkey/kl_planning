@@ -290,10 +290,6 @@ start:
     - -1.5  # x
     - 0    # y
     - 0    # theta
-  covariance:
-    - 0.001  # x
-    - 0.001  # y
-    - 0.001  # theta
 goals:
   goal1:
     state:

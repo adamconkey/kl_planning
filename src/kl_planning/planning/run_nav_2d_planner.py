@@ -119,7 +119,7 @@ if __name__ == '__main__':
         goal_dist = DiracDelta(goal_state, args.force_dirac_identity_precision)
         kl_divergence = math_util.kl_dirac_mvn
     else:
-        ui_util.print_error(f"Unknown goal distribution type: {args.goal_distribution}")
+        ui_util.print_error(f"Unknown goal distribution type: {config['goal_distribution']}")
         sys.exit(0)
             
     

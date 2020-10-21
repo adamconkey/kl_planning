@@ -82,11 +82,11 @@ objects:
   obstacle:
     type: cube
     length: 4
-    width: 1.5
+    width: 1.6
     height: 0.1
     position:
-      - 1.
-      - 0.75
+      - 0.0
+      - 0.8
       - 0.05
     orientation:
       - 0
@@ -140,25 +140,44 @@ indicators:
       - 1
       - 0
       - 1
-agents:
-  agent:
-    type: cube
-    length: 0.2
-    width: 0.2
-    height: 0.05
-    position:
-      - -3.5
+agent:
+  type: cube
+  length: 0.2
+  width: 0.2
+  height: 0.05
+  position:
+    - -3.5
+    - 1.5
+    - 0.05
+  orientation:
+    - 0
+    - 0
+    - 0
+    - 1
+  parent_frame: world
+  color:
+    - 0.23
+    - 0.23
+    - 0.23
+    - 1
+  max_phi: 0.7   # Angular turn rate
+  min_v: 0.0     # Min linear velocity
+  max_v: 0.5     # Max linear velocity
+  min_time: 0.0  # Min duration to apply action
+  max_time: 1.0  # Max duration to apply action
+start:
+  state:
+    - -3.5  # x
+    - 1.5    # y
+    - 0    # theta
+goals:
+  goal:
+    state:
+      - 3.5
       - 1.5
-      - 0.05
-    orientation:
       - 0
-      - 0
-      - 0
-      - 1
-    parent_frame: world
-    color:
-      - 0.23
-      - 0.23
-      - 0.23
-      - 1
-    wheel_radius: 0.5
+    covariance:
+      - 0.03
+      - 0.03
+      - 1.0
+goal_distribution: gaussian
