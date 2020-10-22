@@ -140,37 +140,36 @@ indicators:
       - 1
       - 0
       - 1
-agents:
-  agent:
-    type: cube
-    length: 0.2
-    width: 0.2
-    height: 0.05
-    position:
-      - -1.5
-      - 0
-      - 0.05
-    orientation:
-      - 0
-      - 0
-      - 0
-      - 1
-    parent_frame: world
-    color:
-      - 0.23
-      - 0.23
-      - 0.23
-      - 1
-    wheel_radius: 0.5
+agent:
+  type: cube
+  length: 0.2
+  width: 0.2
+  height: 0.05
+  position:
+    - -1.5
+    - 0
+    - 0.05
+  orientation:
+    - 0
+    - 0
+    - 0
+    - 1
+  parent_frame: world
+  color:
+    - 0.23
+    - 0.23
+    - 0.23
+    - 1
+  max_phi: 0.7   # Angular turn rate
+  min_v: 0.0     # Min linear velocity
+  max_v: 0.5     # Max linear velocity
+  min_time: 0.0  # Min duration to apply action
+  max_time: 1.0  # Max duration to apply action
 start:
   state:
     - -1.5  # x
     - 0    # y
     - 0    # theta
-  covariance:
-    - 0.001  # x
-    - 0.001  # y
-    - 0.001  # theta
 goals:
   goal:
     state:
@@ -181,3 +180,4 @@ goals:
       - 0.03
       - 0.03
       - 1.0
+goal_distribution: gaussian

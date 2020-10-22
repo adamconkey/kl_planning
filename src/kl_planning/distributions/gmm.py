@@ -368,3 +368,8 @@ class GaussianMixture(torch.nn.Module):
         assert pi.size() in [(1, self.n_components, 1)], "Input pi does not have required tensor dimensions (%i, %i, %i)" % (1, self.n_components, 1)
 
         self.pi.data = pi
+
+
+
+if __name__ == '__main__':
+    pass

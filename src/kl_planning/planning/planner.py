@@ -1,11 +1,13 @@
 import sys
 import rospy
 import torch
-
+import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from kl_planning.distributions import GaussianMixture
+from sklearn.mixture import GaussianMixture
+
+# from kl_planning.distributions import GaussianMixture
 from kl_planning.util import vis_util, ui_util
 
 
@@ -35,9 +37,19 @@ class Planner:
         elif act_dist_type == 'gmm':
             act_mu = torch.zeros(horizon, act_size)
             act_mu[:,-1] = max_act[-1] # Initialize prior time durations as max possible
-            act_mu = act_mu.view(1, 1, horizon * act_size).repeat(1, n_components, 1)
-            act_sigma = torch.ones(1, n_components, horizon * act_size)
-            act_dist = GaussianMixture(n_components, horizon * act_size, act_mu, act_sigma)
+            act_mu = act_mu.view(1, horizon * act_size).repeat(n_components, 1)
+            act_sigma = torch.ones(n_components, horizon * act_size)
+            # act_mu = act_mu.view(1, 1, horizon * act_size).repeat(1, n_components, 1)
+            # act_sigma = torch.ones(1, n_components, horizon * act_size)
+            # act_dist = GaussianMixture(n_components, horizon * act_size, act_mu, act_sigma)
+            act_dist = GaussianMixture(n_components,
+                                       covariance_type='diag',
+                                       init_params='kmeans',
+                                       max_iter=10)
+            act_dist.means_ = act_mu.numpy()
+            act_dist.covariances_ = act_sigma.numpy()
+            act_dist.weights_ = np.ones(n_components) / float(n_components)
+            act_dist.precisions_cholesky_ = None
             
         for _ in tqdm(range(n_iters), desc='CEM'):
             # Generate action delta samples
@@ -45,14 +57,11 @@ class Planner:
                 noise = torch.randn(horizon, n_candidates, act_size)
                 act = act_mu + act_sigma * noise
             elif act_dist_type == 'gmm':
-                act = act_dist.sample(n_candidates)
+                act, component_labels = act_dist.sample(n_candidates)
+                # print("LABELS", component_labels)
+                act = torch.from_numpy(act).float()
                 act = act.view(horizon, n_candidates, act_size)
             act = torch.max(torch.min(act, max_act), min_act)
-                
-            if visualize:
-                trajs = env.get_trajectory(start_dist.loc, act)
-                vis_util.visualize_trajectory_samples(trajs, size=0.005)
-                # rospy.sleep(1)
                 
             # Find top K low-cost action sequences
             costs = env.kl_cost(act, start_dist, goal_dist, kl_divergence)
@@ -60,20 +69,31 @@ class Planner:
             elite = act[:, topk_indices]
 
             if visualize:
-                trajs = env.get_trajectory(start_dist.loc, elite)
-                vis_util.visualize_trajectory_samples(trajs, topk_costs)
+                # means = torch.from_numpy(act_dist.means_).view(horizon, 2, -1)
+                # mean_samples = env.get_trajectory(start_dist.loc, means)
+                # vis_util.visualize_trajectory_samples(mean_samples, size=0.1)
                 # rospy.sleep(1)
+                
+                # all_samples = env.get_trajectory(start_dist.loc, act)
+                # vis_util.visualize_trajectory_samples(all_samples, size=0.005)
+                # rospy.sleep(1)
+
+                elite_samples = env.get_trajectory(start_dist.loc, elite)
+                vis_util.visualize_trajectory_samples(elite_samples, topk_costs)
+                # rospy.sleep(2)
                 
             # Update belief with new means and standard deviations
             if act_dist_type == 'gaussian':
                 act_mu = elite.mean(dim=1, keepdim=True)
                 act_sigma = elite.std(dim=1, keepdim=True)
             elif act_dist_type == 'gmm':
-                elite = elite.view(n_elite, horizon * act_size)
-                act_dist.fit(elite, delta=1.0, n_iter=10)
+                elite = elite.view(n_elite, horizon * act_size).numpy()
+                act_dist.fit(elite)
                 # TODO just taking most likely for now
-                best_idx = torch.argmax(act_dist.pi.flatten()).item()
-                act_mu = act_dist.mu.squeeze()[best_idx].view(horizon, 1, act_size)
+                best_idx = np.argmax(act_dist.weights_)
+                act_mu = act_dist.means_[best_idx]
+                act_mu = torch.from_numpy(act_mu).view(horizon, 1, act_size)
+
+                # print("WEIGHTS", act_dist.weights_)
                 
-    
         return act_mu.squeeze()
