@@ -164,7 +164,7 @@ agent:
   min_v: 0.0     # Min linear velocity
   max_v: 0.5     # Max linear velocity
   min_time: 0.0  # Min duration to apply action
-  max_time: 1.0  # Max duration to apply action
+  max_time: 0.8  # Max duration to apply action
 start:
   state:
     - -1.5  # x

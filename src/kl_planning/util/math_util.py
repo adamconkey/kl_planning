@@ -6,53 +6,54 @@ from kl_planning.distributions import GaussianMixture, DiracDelta
 from kl_planning.util import ui_util
 
 
-def compute_sigma_points(mu, sigma, alpha=1, beta=2, kappa=1):
+def compute_sigma_points(mu, sigma, beta=2):
     B = mu.size(0)
     n = mu.size(-1)
     n_sigma = 2 * n + 1
-    lambda_ = alpha**2 * (n + kappa) - n
 
-    M = torch.cholesky((n + lambda_) * sigma) # One (fast) way to do matrix sqrt
-        
-    sigma_points = mu.unsqueeze(1).repeat(1, n_sigma, 1)  # (B, 2n+1, n)
+    L = torch.cholesky(sigma) # One (fast) way to do matrix sqrt        
+    P_sigma = mu.unsqueeze(1).repeat(1, n_sigma, 1)  # (B, 2n+1, n), P_sigma[0] stays mean
     for i in range(n):
-        sigma_points[:,i+1,:] += M[:,i,:]
-        sigma_points[:,n+i+1,:] -= M[:,i,:]
-    return sigma_points
+        P_sigma[:,i+1,:] += beta * L[:,i,:]
+        P_sigma[:,n+i+1,:] -= beta * L[:,i,:]
+    return P_sigma
+
+
+
+# def compute_sigma_points(mu, sigma, alpha=1, beta=2, kappa=1):
+#     B = mu.size(0)
+#     n = mu.size(-1)
+#     n_sigma = 2 * n + 1
+#     lambda_ = alpha**2 * (n + kappa) - n
+
+#     M = torch.cholesky((n + lambda_) * sigma) # One (fast) way to do matrix sqrt
+        
+#     sigma_points = mu.unsqueeze(1).repeat(1, n_sigma, 1)  # (B, 2n+1, n)
+#     for i in range(n):
+#         sigma_points[:,i+1,:] += M[:,i,:]
+#         sigma_points[:,n+i+1,:] -= M[:,i,:]
+#     return sigma_points
     
 
-def unscented_transform(mu, sigma, g, alpha=1, beta=2, kappa=1):
+def unscented_transform(mu, sigma, g, beta=2):
     """
-    beta=2 optimal for Gaussians
-
-    Not sure about the alpha/kappa defaults
+    The nonlinear function g is assumed to include any stochasticity being 
+    modeled, so no need to add the Q_t term in standard UKF.
     """
     B = mu.size(0)
-    n = mu.size(-1)
-    n_sigma = 2 * n + 1
-    lambda_ = alpha**2 * (n + kappa) - n
+    n_state = mu.size(-1)
+    n_sigma = 2 * n_state + 1
 
-    w_m = torch.full((B, n_sigma, 1), 1. / (2 * (n + lambda_)))
-    w_m[:,0] = lambda_ / (n + lambda_)
-    w_c = torch.full((B, n_sigma, 1, 1), 1. / (2 * (n + lambda_)))
-    w_c[:,0] = lambda_ / (n + lambda_) + (1 - alpha**2 + beta)
+    P_sigma = compute_sigma_points(mu, sigma, beta)
+    S = g(P_sigma.view(B * n_sigma, -1)).view(B, n_sigma, -1) # (B, 2n+1, n)
 
-    sigma_points = compute_sigma_points(mu, sigma, alpha, beta, kappa)
-    Y = g(sigma_points.view(B * n_sigma, -1)).view(B, n_sigma, -1) # (B, 2n+1, n)
-
-    mu_prime = torch.sum(w_m * Y, dim=1)
-    sigma_prime = torch.zeros(B, n, n)
+    mu_prime = torch.sum(S / (2. * n_state + 1), dim=1)
+    sigma_prime = torch.zeros(B, n_state, n_state)
     for i in range(n_sigma):
-        y = Y[:,i,:] - mu_prime
-        sigma_prime += w_c[:,i] * y.unsqueeze(2) * y.unsqueeze(1) # outer product
-
-    # TODO can add in this process noise which is in standard UKF, however I think UKF
-    # assumes you're using a deterministic nonlinear function. I have stochastic dynamics
-    # so I think it should be equivalent to not model it here and instead just compute
-    # sigma points being passed through stochastic nonlinear function.
-    # sigma_prime += torch.diag_embed(torch.rand(B, n), dim1=-2, dim2=-1) * 0.005
+        x = S[:,i,:] - mu_prime
+        sigma_prime += x.unsqueeze(2) * x.unsqueeze(1) / (2. * beta**2) # outer product
         
-    return mu_prime, sigma_prime, Y
+    return mu_prime, sigma_prime, S
 
 
 def kl_gmm_gmm(p, q):

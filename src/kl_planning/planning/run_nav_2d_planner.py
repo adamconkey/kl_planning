@@ -4,35 +4,12 @@ import sys
 import rospy
 import rospkg
 import torch
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import numpy as np
 import argparse
-import cv2
-from cv_bridge import CvBridge
-from scipy.stats import multivariate_normal
-from math import pi
 
 from kl_planning.planning import Planner
 from kl_planning.environments import Navigation2DEnvironment
-from kl_planning.util import ros_util, math_util, ui_util, file_util
-from kl_planning.srv import DisplayImage, DisplayImageRequest
-
-
-def plot(mus, sigmas):
-    x = np.linspace(-2, 2, 500)
-    y = np.linspace(-2, 2, 500)
-    X, Y = np.meshgrid(x, y)
-    pos = np.array([X.flatten(), Y.flatten()]).T
-
-    fig, ax = plt.subplots(1, 1)
-    fig.set_size_inches(10, 10)
-    for mu, sigma in zip(mus, sigmas):
-        rv = multivariate_normal(mu.squeeze()[:2], sigma.squeeze()[:2,:2])
-        ax.contour(rv.pdf(pos).reshape(500,500))
-    ax.axis('off')
-    plt.tight_layout()
-    plt.savefig('/tmp/kl_img.png', bbox_inches='tight', pad_inches=0) # , transparent=True)
+from kl_planning.util import math_util, ui_util, file_util, vis_util
 
 
 if __name__ == '__main__':
@@ -138,23 +115,16 @@ if __name__ == '__main__':
                                args.n_elite, args.n_cem_gmm_components,
                                kl_divergence, args.cem_distribution, visualize=True)
         
-        # mus = [start_dist.loc.unsqueeze(0)]
-        # sigmas = [start_dist.covariance_matrix.unsqueeze(0)]
+        mus = [start_dist.loc.unsqueeze(0)]
+        sigmas = [start_dist.covariance_matrix.unsqueeze(0)]
         
-        # for t in range(len(act)):
-        #     act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * state_size + 1, 1)
-        #     act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
-        #     g = lambda x: env.dynamics(x, act_t)
-        #     mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[-1], sigmas[-1], g)
-        #     mus.append(mu_prime)
-        #     sigmas.append(sigma_prime)
-
-
-        # TODO need to update dynamics so that you separately update belief and true dynamics
-        # by passing them through both functions with respective noise. I think you want to add
-        # yet another noise parameter so you can maintain observation noise to mimic noisy sensor
-        # for initial state distribution. Can do no-op action on current state 
-
+        for t in range(len(act)):
+            act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * state_size + 1, 1)
+            act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
+            g = lambda x: env.dynamics(x, act_t)
+            mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[-1], sigmas[-1], g)
+            mus.append(mu_prime)
+            sigmas.append(sigma_prime)
         
         # Update current position for next planning step
         true_state = env.dynamics(true_state.unsqueeze(0), act[0].unsqueeze(0),
@@ -167,15 +137,8 @@ if __name__ == '__main__':
         # mus.append(goal_mu)
         # sigmas.append(goal_sigma)
 
-        # plot(mus, sigmas)
+        temp_img_filename = '/tmp/kl_img.png'
+        vis_util.plot_2d_gaussians(mus, sigmas, temp_img_filename)
+        vis_util.display_rviz_img(temp_img_filename)
 
-        # img = cv2.imread('/tmp/kl_img.png', cv2.IMREAD_COLOR)
-        # img_msg = CvBridge().cv2_to_imgmsg(img, "bgr8")
-    
-        # display_img = rospy.ServiceProxy("/display_image", DisplayImage)
-        # try:
-        #     display_img(DisplayImageRequest(img_msg))
-        # except rospy.ServiceException as e:
-        #     rospy.logerr(f"Service request to display image failed: {e}")
-
-        # plt.close('all') # Free up memory
+        sys.exit()

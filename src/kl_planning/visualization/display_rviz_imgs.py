@@ -10,7 +10,7 @@ class RvizImageDisplay:
         self.rate = rospy.Rate(1)
         self.img_msg = None
         self.img_pub = rospy.Publisher("/image", Image, queue_size=1)
-        self.img_srv = rospy.Service("/display_image", DisplayImage, self._display_img)
+        self.img_srv = rospy.Service("/visualization/display_image", DisplayImage, self._display_img)
 
     def run(self):
         rospy.loginfo("Ready to display images")
