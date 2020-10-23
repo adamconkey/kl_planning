@@ -15,9 +15,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   south_wall:
     type: cube
@@ -35,9 +35,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   east_wall:
     type: cube
@@ -55,9 +55,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   west_wall:
     type: cube
@@ -75,9 +75,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   divider_wall1:
     type: cube
@@ -95,9 +95,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   divider_wall2:
     type: cube
@@ -115,9 +115,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   divider_cap1:
     type: cube
@@ -135,9 +135,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   divider_cap2:
     type: cube
@@ -155,9 +155,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   divider_cap3:
     type: cube
@@ -175,9 +175,9 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
   divider_cap4:
     type: cube
@@ -195,20 +195,80 @@ objects:
       - 1
     parent_frame: world
     color:
-      - 0
-      - 0
-      - 1
+      - 0.2
+      - 0.4
+      - 0.6
       - 1
 indicators:
-  start:
-    type: cylinder
+  start1:
+    type: cube
     length: 0.25
-    width: 0.25
-    height: 0.0001
+    width: 0.05
+    height: 0.01
     position:
       - -1.5
+      - -0.15
+      - 0.01
+    orientation:
       - 0
       - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 1
+      - 0
+      - 0
+      - 1
+  start2:
+    type: cube
+    length: 0.25
+    width: 0.05
+    height: 0.01
+    position:
+      - -1.5
+      - 0.15
+      - 0.01
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 1
+      - 0
+      - 0
+      - 1
+  start3:
+    type: cube
+    length: 0.05
+    width: 0.35
+    height: 0.01
+    position:
+      - -1.65
+      - 0.0
+      - 0.01
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 1
+      - 0
+      - 0
+      - 1
+  start4:
+    type: cube
+    length: 0.05
+    width: 0.35
+    height: 0.01
+    position:
+      - -1.35
+      - 0.0
+      - 0.01
     orientation:
       - 0
       - 0
@@ -222,13 +282,13 @@ indicators:
       - 1
   goal1:
     type: cylinder
-    length: 0.25
-    width: 0.25
-    height: 0.0001
+    length: 0.05
+    width: 0.05
+    height: 0.5
     position:
       - 1.5
       - 1.5
-      - 0
+      - 0.25
     orientation:
       - 0
       - 0
@@ -242,13 +302,13 @@ indicators:
       - 1
   goal2:
     type: cylinder
-    length: 0.25
-    width: 0.25
-    height: 0.0001
+    length: 0.05
+    width: 0.05
+    height: 0.5
     position:
       - 1.5
       - -1.5
-      - 0
+      - 0.25
     orientation:
       - 0
       - 0

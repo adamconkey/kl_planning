@@ -59,7 +59,7 @@ class SceneManager:
             text_data = {
                 'type': 'text',
                 'text': str(goal_data['weight']),
-                'position': [goal_data['state'][0], goal_data['state'][1], 0.75],
+                'position': [goal_data['state'][0], goal_data['state'][1], 0.9],
                 'orientation': [0, 0, 0, 1],
                 'parent_frame': 'world',
                 'color': [1, 1, 1, 1],

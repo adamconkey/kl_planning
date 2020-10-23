@@ -3,8 +3,7 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /Grid1
+      Expanded: ~
       Splitter Ratio: 0.507905125617981
     Tree Height: 726
   - Class: rviz/Selection
@@ -46,10 +45,10 @@ Visualization Manager:
       Offset:
         X: 0
         Y: 0
-        Z: 0
+        Z: 0.009999999776482582
       Plane: XY
       Plane Cell Count: 22
-      Reference Frame: <Fixed Frame>
+      Reference Frame: world
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
@@ -60,21 +59,21 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /start_goal
       Name: Start/Goal
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /agent
       Name: Agent
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
-      Value: false
+      Value: true
     - Class: rviz/TF
       Enabled: false
       Frame Timeout: 15
@@ -92,7 +91,7 @@ Visualization Manager:
     - Class: rviz_textured_quads/MeshDisplayCustom
       Enabled: true
       Image Topic: /image
-      Meters per pixel: 0.004259999841451645
+      Meters per pixel: 0.004399999976158142
       Name: MeshDisplayCustom
       Quad Frame: kl_img
       Value: true
@@ -132,25 +131,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.789448261260986
+      Distance: 5.202226638793945
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.03540576249361038
-        Y: 0.0019216770306229591
-        Z: -0.045668378472328186
+        X: -0.4358535408973694
+        Y: -0.002174548339098692
+        Z: 0.5269899964332581
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9847968816757202
+      Pitch: 1.124796748161316
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.143580675125122
+      Yaw: 3.1435890197753906
     Saved: ~
 Window Geometry:
   Displays:

@@ -110,35 +110,32 @@ if __name__ == '__main__':
     for k in range(100):
         env.set_agent_location(true_state)
         
-        act = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act,
-                               args.horizon, args.n_iters, args.n_candidates,
-                               args.n_elite, args.n_cem_gmm_components,
-                               kl_divergence, args.cem_distribution, visualize=True)
+        plan_return = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act,
+                                       args.horizon, args.n_iters, args.n_candidates,
+                                       args.n_elite, args.n_cem_gmm_components,
+                                       kl_divergence, args.cem_distribution, visualize=True)
         
-        mus = [start_dist.loc.unsqueeze(0)]
-        sigmas = [start_dist.covariance_matrix.unsqueeze(0)]
+        if args.cem_distribution == 'gmm':
+            # TODO just taking most likely for now
+            best_idx = np.argmax(plan_return.weights_)
+            act = plan_return.means_[best_idx]
+            act_size = len(min_act)
+            act = torch.from_numpy(act).view(args.horizon, act_size)
+            vis_util.visualize_gmm_plan(start_dist.loc.unsqueeze(0),
+                                        start_dist.covariance_matrix.unsqueeze(0),
+                                        plan_return, env, state_size, args.horizon, act_size)
+        else:
+            act = plan_return
+            vis_util.visualize_gaussian_plan(start_dist.loc.unsqueeze(0),
+                                             start_dist.covariance_matrix.unsqueeze(0),
+                                             act, env, state_size)
         
-        for t in range(len(act)):
-            act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * state_size + 1, 1)
-            act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
-            g = lambda x: env.dynamics(x, act_t)
-            mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[-1], sigmas[-1], g)
-            mus.append(mu_prime)
-            sigmas.append(sigma_prime)
-        
+        sys.exit()
+                
         # Update current position for next planning step
         true_state = env.dynamics(true_state.unsqueeze(0), act[0].unsqueeze(0),
                                   noise_gain=args.real_dynamics_noise).squeeze()
-        
+
         # TODO for now just taking true state as mean, probably more correct to have a noisy
         # observation function and then let the agent use an observation model in planning.
         start_dist.loc = true_state
-        
-        # mus.append(goal_mu)
-        # sigmas.append(goal_sigma)
-
-        temp_img_filename = '/tmp/kl_img.png'
-        vis_util.plot_2d_gaussians(mus, sigmas, temp_img_filename)
-        vis_util.display_rviz_img(temp_img_filename)
-
-        sys.exit()

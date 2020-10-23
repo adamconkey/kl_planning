@@ -23,6 +23,8 @@ class Planner:
         """
         TODO: Introducing a distribution abstraction here would really clean things 
               up, instead of doing these switches everywhere on the distribution type.
+              Can then also return just the end distribution instead of these
+              conditional return types I currently have.
         """
         if act_dist_type not in ACT_DISTRIBUTION_TYPES:
             ui_util.print_error(f"\nUnknown action distribution type for CEM: {act_dist_type}\n")
@@ -86,14 +88,10 @@ class Planner:
             if act_dist_type == 'gaussian':
                 act_mu = elite.mean(dim=1, keepdim=True)
                 act_sigma = elite.std(dim=1, keepdim=True)
+                plan_return = act_mu.squeeze()
             elif act_dist_type == 'gmm':
                 elite = elite.view(n_elite, horizon * act_size).numpy()
                 act_dist.fit(elite)
-                # TODO just taking most likely for now
-                best_idx = np.argmax(act_dist.weights_)
-                act_mu = act_dist.means_[best_idx]
-                act_mu = torch.from_numpy(act_mu).view(horizon, 1, act_size)
-
-                # print("WEIGHTS", act_dist.weights_)
+                plan_return = act_dist
                 
-        return act_mu.squeeze()
+        return plan_return
