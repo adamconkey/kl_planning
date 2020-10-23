@@ -150,13 +150,17 @@ class Navigation2DEnvironment:
         for t in range(T):
             # Increasing contribution of KL cost as time increases
             lambda_ = (t + 1) / float(T)
-            p_t = MultivariateNormal(mus[t], sigmas[t])
-            # p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1))
+            # TODO for now diagonalizing as there is no general MVN implementation of KL
+            if isinstance(goal_dist, torch.distributions.uniform.Uniform):
+                p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1))
+            else:
+                p_t = MultivariateNormal(mus[t], sigmas[t])
+
             if self.m_projection:
                 kl_cost_t = lambda_ * kl_divergence(goal_dist, p_t)
                 if isinstance(goal_dist, torch.distributions.uniform.Uniform):
                     # TODO scaling because uniform is huge, maybe parameterize this
-                    kl_cost_t = kl_cost_t.sum(dim=-1) / 1000.0
+                    kl_cost_t = kl_cost_t.sum(dim=-1) #  / 10.0
                 kl_cost += kl_cost_t
             else:
                 kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
