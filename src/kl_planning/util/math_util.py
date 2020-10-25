@@ -17,25 +17,9 @@ def compute_sigma_points(mu, sigma, beta=2):
         P_sigma[:,i+1,:] += beta * L[:,i,:]
         P_sigma[:,n+i+1,:] -= beta * L[:,i,:]
     return P_sigma
-
-
-
-# def compute_sigma_points(mu, sigma, alpha=1, beta=2, kappa=1):
-#     B = mu.size(0)
-#     n = mu.size(-1)
-#     n_sigma = 2 * n + 1
-#     lambda_ = alpha**2 * (n + kappa) - n
-
-#     M = torch.cholesky((n + lambda_) * sigma) # One (fast) way to do matrix sqrt
-        
-#     sigma_points = mu.unsqueeze(1).repeat(1, n_sigma, 1)  # (B, 2n+1, n)
-#     for i in range(n):
-#         sigma_points[:,i+1,:] += M[:,i,:]
-#         sigma_points[:,n+i+1,:] -= M[:,i,:]
-#     return sigma_points
     
 
-def unscented_transform(mu, sigma, g, beta=2):
+def unscented_transform(mu, sigma, g, beta=2, device=torch.device('cuda')):
     """
     The nonlinear function g is assumed to include any stochasticity being 
     modeled, so no need to add the Q_t term in standard UKF.
@@ -48,7 +32,7 @@ def unscented_transform(mu, sigma, g, beta=2):
     S = g(P_sigma.view(B * n_sigma, -1)).view(B, n_sigma, -1) # (B, 2n+1, n)
 
     mu_prime = torch.sum(S / (2. * n_state + 1), dim=1)
-    sigma_prime = torch.zeros(B, n_state, n_state)
+    sigma_prime = torch.zeros(B, n_state, n_state, device=device)
     for i in range(n_sigma):
         x = S[:,i,:] - mu_prime
         sigma_prime += x.unsqueeze(2) * x.unsqueeze(1) / (2. * beta**2) # outer product
@@ -135,7 +119,9 @@ def kl_dirac_mvn(dirac, mvn):
                          f"must match MVN mean shape {mvn.loc.shape}")
 
     if dirac.force_identity_precision:
-        precision = torch.eye(mvn.loc.size(-1)).unsqueeze(0).repeat(mvn.loc.size(0), 1, 1)
+        # TODO hard-coded device
+        precision = torch.eye(mvn.loc.size(-1), device=torch.device('cuda'))
+        precision = precision.unsqueeze(0).repeat(mvn.loc.size(0), 1, 1)
     else:
         precision = mvn.precision_matrix
 

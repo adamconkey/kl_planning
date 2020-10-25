@@ -16,10 +16,10 @@ ACT_DISTRIBUTION_TYPES = ['gaussian', 'gmm']
 
 class Planner:
 
-    def plan_cem(self, env, start_dist, goal_dist, min_act, max_act,
+    def plan_cem(self, env, start_dist, goal_dist, min_act, max_act, device,
                  horizon=10, n_iters=10, n_candidates=1000, n_elite=10,
                  n_components=2, kl_divergence=None, act_dist_type='gaussian',
-                 visualize=False):
+                 visualize=False, **kwargs):
         """
         TODO: Introducing a distribution abstraction here would really clean things 
               up, instead of doing these switches everywhere on the distribution type.
@@ -33,9 +33,9 @@ class Planner:
         # Initialize action distribution for sampling trajectories
         act_size = min_act.size(-1)
         if act_dist_type == 'gaussian':
-            act_mu = torch.zeros(horizon, 1, act_size)
+            act_mu = torch.zeros(horizon, 1, act_size, device=device)
             act_mu[:,:,-1] = max_act[-1] # Initialize prior time durations as max possible
-            act_sigma = torch.ones(horizon, 1, act_size)
+            act_sigma = torch.ones(horizon, 1, act_size, device=device)
         elif act_dist_type == 'gmm':
             act_mu = torch.zeros(horizon, act_size)
             act_mu[:,-1] = max_act[-1] # Initialize prior time durations as max possible
@@ -56,33 +56,24 @@ class Planner:
         for _ in tqdm(range(n_iters), desc='CEM'):
             # Generate action delta samples
             if act_dist_type == 'gaussian':
-                noise = torch.randn(horizon, n_candidates, act_size)
-                act = act_mu + act_sigma * noise
+                noise = torch.randn(horizon, n_candidates, act_size, device=device)
+                act = act_mu + act_sigma * noise                
             elif act_dist_type == 'gmm':
                 act, component_labels = act_dist.sample(n_candidates)
-                # print("LABELS", component_labels)
                 act = torch.from_numpy(act).float()
                 act = act.view(horizon, n_candidates, act_size)
             act = torch.max(torch.min(act, max_act), min_act)
                 
             # Find top K low-cost action sequences
-            costs = env.kl_cost(act, start_dist, goal_dist, kl_divergence)
+            costs = env.cost(act, start_dist, goal_dist, kl_divergence, **kwargs)
             topk_costs, topk_indices = costs.topk(n_elite, dim=-1, largest=False, sorted=False)    
             elite = act[:, topk_indices]
 
             if visualize:
                 # means = torch.from_numpy(act_dist.means_).view(horizon, 2, -1)
-                # mean_samples = env.get_trajectory(start_dist.loc, means)
-                # vis_util.visualize_trajectory_samples(mean_samples, size=0.1)
-                # rospy.sleep(1)
-                
-                # all_samples = env.get_trajectory(start_dist.loc, act)
-                # vis_util.visualize_trajectory_samples(all_samples, size=0.005)
-                # rospy.sleep(1)
-
-                elite_samples = env.get_trajectory(start_dist.loc, elite)
-                vis_util.visualize_trajectory_samples(elite_samples, topk_costs)
-                # rospy.sleep(2)
+                # env.visualize_samples(start_dist.loc, means, size=0.07)
+                # env.visualize_samples(start_dist.loc, act, size=0.005)
+                env.visualize_samples(start_dist.loc, elite, topk_costs)
                 
             # Update belief with new means and standard deviations
             if act_dist_type == 'gaussian':

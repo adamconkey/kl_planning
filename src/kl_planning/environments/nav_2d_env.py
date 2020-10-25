@@ -109,32 +109,21 @@ class Navigation2DEnvironment:
             obj_in_collision = checker(q)
             in_collision += obj_in_collision  # Boolean OR operation
         return in_collision
-
-    def euclidean_cost(self, act, start_dist, goal_dist, lambda_=1.0, noise_gain=0.0):
-        cost = 0
-        trajs = self.get_trajectory(start_dist.loc, act, noise_gain)[1:] # Exclude start state
-        for t in range(len(trajs)):
-            # Euclidean distance cost to goal
-            cost += 1 + lambda_ * (goal_dist.loc - trajs[t]).square().sum(dim=-1)
-            # Collision cost
-            cost += self.in_collision(trajs[t]) * 100.0
-        return cost
     
-    def kl_cost(self, act, start_dist, goal_dist, kl_divergence=None):
+    def cost(self, act, start_dist, goal_dist, kl_divergence=None):
         if kl_divergence is None:
             kl_divergence = torch.distributions.kl.kl_divergence
 
         n_candidates = act.size(1)
-        n_sigma = 2 * act.size(-1) + 1
+        n_state = start_dist.loc.size(-1)
+        n_sigma = 2 * n_state + 1
         
         mus = [start_dist.loc.repeat(n_candidates, 1)]
         sigmas = [start_dist.covariance_matrix.repeat(n_candidates, 1, 1)]
         sigma_points = []
 
-        state_size = start_dist.loc.size(-1)
-
         for t in range(len(act)):
-            act_t = act[t].unsqueeze(1).repeat(1, 2 * state_size + 1, 1)
+            act_t = act[t].unsqueeze(1).repeat(1, n_sigma, 1)
             act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
             g = lambda x: self.dynamics(x, act_t, self.belief_dynamics_noise)
             mu_prime, sigma_prime, Y = math_util.unscented_transform(mus[-1], sigmas[-1], g)
@@ -180,6 +169,12 @@ class Navigation2DEnvironment:
         cost += collision_cost
 
         return cost
+
+    def visualize_samples(self, start_state, samples, costs=None, size=0.03, sleep=0):
+        elite_samples = self.get_trajectory(start_state, samples)
+        vis_util.visualize_line_trajectory_samples(elite_samples, costs, size)
+        if sleep > 0:
+            rospy.sleep(sleep)
 
     def _create_collision_checkers(self, buffer_=0.1):
         self.collision_checkers = {}

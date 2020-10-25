@@ -13,7 +13,7 @@ from kl_planning.srv import VisualizeTrajectorySamples, VisualizeTrajectorySampl
 from kl_planning.util import math_util
 
 
-def visualize_trajectory_samples(samples, costs=None, size=0.03):
+def visualize_line_trajectory_samples(samples, costs=None, size=0.03):
     """
     Serializes trajectory samples and makes service request to visualize them.
     Samples are visualized as lines in rviz colored based on cost.

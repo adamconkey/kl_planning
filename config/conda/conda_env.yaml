@@ -7,6 +7,7 @@ dependencies:
   - qt=5.9.5    # Version needed to build rviz_textured_quads
   - pyyaml
   - tqdm
+  - h5py
   - matplotlib
   - ipython
   - opencv
@@ -22,3 +23,4 @@ dependencies:
     - empy         # Needed to build ROS msgs in catkin
     - rospkg       # Needed to run ROS scripts
     - dataclasses  # Needed for python3.6, will be included in python3.7
+    - pyquaternion
