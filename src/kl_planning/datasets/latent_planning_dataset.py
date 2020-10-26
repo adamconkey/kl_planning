@@ -146,7 +146,7 @@ class LatentPlanningDataset(torch.utils.data.Dataset):
                     if modality == 'delta_joint_positions':
                         data = h5_file['joint_positions'][::self.time_subsample]
                         deltas = data[1:] - data[:-1]
-                        h5_min = np.max(deltas)
+                        h5_min = np.min(deltas)
                         h5_max = np.max(deltas)
                     else:
                         h5_min = np.min(h5_file[modality])
@@ -158,6 +158,11 @@ class LatentPlanningDataset(torch.utils.data.Dataset):
         
         total_count = float(sum(goal_counts))
         self.goal_weights = [1. - (count / total_count) for count in goal_counts]
+
+        # TODO post-processing deltas to give padded range around max
+        value = max(abs(self.data_ranges['delta_joint_positions'][0]),
+                    abs(self.data_ranges['delta_joint_positions'][1])) + 0.1
+        self.data_ranges['delta_joint_positions'] = [-value, value]
 
     def state_dict(self):
         return vars(self)

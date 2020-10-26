@@ -31,16 +31,18 @@ class LatentPlanningLearner:
         self.config = default_config()
         self.device = device
 
+        self.checkpoint = None
         if checkpoint_filename:
             self._load_checkpoint(checkpoint_filename)
-        if params:
-            self.config.update_with_dict(params, False) # Override anything passed from command line
+        elif params:
+            self.config.update_with_dict(params, True) # Override anything passed from command line
 
         self.dataset = LatentPlanningDataset(self.config.obs_modalities,
                                              self.config.act_modalities,
                                              chunk_size=self.config.chunk_size,
                                              time_subsample=self.config.time_subsample)
-        self.dataset.load_state_dict(self.checkpoint['dataset'])
+        if self.checkpoint:
+            self.dataset.load_state_dict(self.checkpoint['dataset'])
         
         self.models = self.config.models
         self.send_models_to_device()

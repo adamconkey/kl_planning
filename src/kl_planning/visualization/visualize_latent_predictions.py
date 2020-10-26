@@ -39,20 +39,20 @@ def generate_predictions(data, checkpoint, device):
     decoded = learner.predict_outputs(init_obs, init_act, act)
     return decoded
 
-def visualize_data(h5_filename, cp_filename, start_idx, device, rate=30):
+def visualize_data(h5_filename, cp_filename, start_idx, device, time_subsample=1, rate=30):
     rospy.loginfo("Loading H5 data...")
     with h5py.File(h5_filename, 'r') as h5_file:
-        rgb = np.array(h5_file['rgb'][start_idx:])
-        joint_pos = np.array(h5_file['joint_positions'][start_idx:])
+        rgb = np.array(h5_file['rgb'][start_idx:None:time_subsample])
+        joint_pos = np.array(h5_file['joint_positions'][start_idx:None:time_subsample])
         delta_joint_pos = joint_pos[1:] - joint_pos[:-1]
         delta_joint_pos = np.concatenate([np.zeros((1, joint_pos.shape[-1])), delta_joint_pos], axis=0)
-        gripper_pos = np.array(h5_file['gripper_joint_positions'][start_idx:])
+        gripper_pos = np.array(h5_file['gripper_joint_positions'][start_idx:None:time_subsample])
         tf = {}
         for obj_id, obj_data in h5_file['tf'].items():
             tf[obj_id] = {
                 'parent_frame': obj_data.attrs['parent_frame'],
-                'position': np.array(obj_data['position'][start_idx:]),
-                'orientation': np.array(obj_data['orientation'][start_idx:])
+                'position': np.array(obj_data['position'][start_idx:None:time_subsample]),
+                'orientation': np.array(obj_data['orientation'][start_idx:None:time_subsample])
             }
         objects = {}
         for obj_id in h5_file['objects'].keys():
@@ -133,7 +133,11 @@ if __name__ == '__main__':
     file_util.check_path_exists(h5_filename, "H5 file")
     if cp_filename:
         file_util.check_path_exists(cp_filename, "Model checkpoint file")
-
+        learner = LatentPlanningLearner(checkpoint_filename=cp_filename)
+        time_subsample = learner.config.time_subsample
+    else:
+        time_subsample = 1
+        
     device = torch.device('cuda' if torch.cuda.is_available() and not use_cpu else 'cpu')
     
-    visualize_data(h5_filename, cp_filename, start_idx, device, rate)
+    visualize_data(h5_filename, cp_filename, start_idx, device, time_subsample, rate)

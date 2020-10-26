@@ -322,7 +322,7 @@ class RSSM(nn.Module):
             # print("BELIEF", b_t.shape) # (b, c)
             
             # Update belief (deterministic RNN hidden state)
-            rnn_in = self.act_fn(self.fc_embed_state_action(torch.cat([s_t, a_t], dim=1)))
+            rnn_in = self.act_fn(self.fc_embed_state_action(torch.cat([s_t, a_t], dim=-1)))
             b_tp1 = self.rnn(rnn_in, b_t)
             beliefs[t + 1] = b_tp1
             # Compute state prior by applying transition dynamics

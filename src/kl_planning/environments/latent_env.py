@@ -22,7 +22,8 @@ class LatentEnvironment:
         return next_state
 
 
-    def cost(self, act, start_dist, goal_dist, kl_divergence=None, belief=None):
+    def cost(self, act, start_dist, goal_dist, kl_divergence=None,
+             device=torch.device('cuda'), belief=None):
         if belief is None:
             raise ValueError("Must pass in belief")
         if kl_divergence is None:
@@ -43,7 +44,7 @@ class LatentEnvironment:
             g = lambda x: self.dynamics(x, act_t, belief)
             mu = mus[-1]
             sigma = sigmas[-1]
-            mu_prime, sigma_prime, Y = math_util.unscented_transform(mu, sigma, g)
+            mu_prime, sigma_prime, Y = math_util.unscented_transform(mu, sigma, g, device=device)
             mus.append(mu_prime)
             sigmas.append(sigma_prime)
             sigma_points.append(Y)

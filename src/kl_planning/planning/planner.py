@@ -62,12 +62,15 @@ class Planner:
                 act, component_labels = act_dist.sample(n_candidates)
                 act = torch.from_numpy(act).float()
                 act = act.view(horizon, n_candidates, act_size)
-            act = torch.max(torch.min(act, max_act), min_act)
+            act = torch.max(torch.min(act, max_act), min_act) # (horizon, candidates, act)
+            # print("ACT", act)
                 
             # Find top K low-cost action sequences
-            costs = env.cost(act, start_dist, goal_dist, kl_divergence, **kwargs)
+            costs = env.cost(act, start_dist, goal_dist, kl_divergence, device=device, **kwargs)
             topk_costs, topk_indices = costs.topk(n_elite, dim=-1, largest=False, sorted=False)    
             elite = act[:, topk_indices]
+
+            # print("ELITE", elite)
 
             if visualize:
                 # means = torch.from_numpy(act_dist.means_).view(horizon, 2, -1)
@@ -80,6 +83,8 @@ class Planner:
                 act_mu = elite.mean(dim=1, keepdim=True)
                 act_sigma = elite.std(dim=1, keepdim=True)
                 plan_return = act_mu.squeeze()
+                # print("MEAN", act_mu)
+                # print("PLAN RETURN", plan_return)
             elif act_dist_type == 'gmm':
                 elite = elite.view(n_elite, horizon * act_size).numpy()
                 act_dist.fit(elite)

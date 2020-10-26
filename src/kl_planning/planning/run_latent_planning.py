@@ -96,7 +96,7 @@ class LatentPlanner:
         # TODO assuming Dirac distribution for now to test planner
         from kl_planning.distributions import DiracDelta
         goal_dist = DiracDelta(goal_state.repeat(n_candidates, 1), force_identity_precision=True)
-        kl_divergence = math_util.kl_dirac_mvn
+        kl_divergence = lambda x, y: math_util.kl_dirac_mvn(x, y, self.device)
 
         joint_delta = 0.1
         min_act = torch.full((self.learner.config.action_size,), -joint_delta, device=self.device)
@@ -120,7 +120,10 @@ class LatentPlanner:
                                            self.device, horizon, n_iters, n_candidates, n_elite,
                                            kl_divergence=kl_divergence, belief=belief)
 
-            deltas = self.learner.dataset.process_data_out(deltas, 'delta_joint_positions')            
+            
+            deltas = self.learner.dataset.process_data_out(deltas, 'delta_joint_positions')
+
+            # print("DELTAS", deltas)
 
             if self.visualize:
                 decoded = self.learner.decode_state(current_state.unsqueeze(0))
@@ -168,8 +171,8 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint', type=str, required=True)
     parser.add_argument('--horizon', type=int, default=5)
     parser.add_argument('--n_iters', type=int, default=5)
-    parser.add_argument('--n_candidates', type=int, default=10)
-    parser.add_argument('--n_elite', type=int, default=3)
+    parser.add_argument('--n_candidates', type=int, default=25)
+    parser.add_argument('--n_elite', type=int, default=5)
     parser.add_argument('--execution_rate', type=int, default=1)
     parser.add_argument('--n_obs_hist', type=int, default=3)
     parser.add_argument('--timeout', type=int, default=45)

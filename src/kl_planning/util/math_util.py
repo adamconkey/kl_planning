@@ -98,7 +98,7 @@ def kl_gmm_gmm(p, q):
     return kl_approx
 
 
-def kl_dirac_mvn(dirac, mvn):
+def kl_dirac_mvn(dirac, mvn, device=torch.device('cuda')):
     """
     Computes KL divergence between DiracDelta and MultivariateNormal.
 
@@ -120,7 +120,7 @@ def kl_dirac_mvn(dirac, mvn):
 
     if dirac.force_identity_precision:
         # TODO hard-coded device
-        precision = torch.eye(mvn.loc.size(-1), device=torch.device('cuda'))
+        precision = torch.eye(mvn.loc.size(-1), device=device)
         precision = precision.unsqueeze(0).repeat(mvn.loc.size(0), 1, 1)
     else:
         precision = mvn.precision_matrix
