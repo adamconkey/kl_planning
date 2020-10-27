@@ -52,7 +52,9 @@ class Planner:
             act_dist.covariances_ = act_sigma.numpy()
             act_dist.weights_ = np.ones(n_components) / float(n_components)
             act_dist.precisions_cholesky_ = None
-            
+
+        best_costs = []
+        worst_costs = []
         for _ in tqdm(range(n_iters), desc='CEM'):
             # Generate action delta samples
             if act_dist_type == 'gaussian':
@@ -67,9 +69,9 @@ class Planner:
                 
             # Find top K low-cost action sequences
             costs = env.cost(act, start_dist, goal_dist, kl_divergence, device=device, **kwargs)
-            topk_costs, topk_indices = costs.topk(n_elite, dim=-1, largest=False, sorted=False)    
+            topk_costs, topk_indices = costs.topk(n_elite, dim=-1, largest=False, sorted=True)
             elite = act[:, topk_indices]
-
+                        
             # print("ELITE", elite)
 
             if visualize:
@@ -77,6 +79,7 @@ class Planner:
                 # env.visualize_samples(start_dist.loc, means, size=0.07)
                 # env.visualize_samples(start_dist.loc, act, size=0.005)
                 env.visualize_samples(start_dist.loc, elite, topk_costs)
+
                 
             # Update belief with new means and standard deviations
             if act_dist_type == 'gaussian':
@@ -89,5 +92,12 @@ class Planner:
                 elite = elite.view(n_elite, horizon * act_size).numpy()
                 act_dist.fit(elite)
                 plan_return = act_dist
+
+        #     best_costs.append(topk_costs[0].item())
+        #     worst_costs.append(topk_costs[-1].item())
+        # plt.plot(best_costs)
+        # plt.plot(worst_costs)
+        # plt.show()
+        # plt.close('all')
                 
         return plan_return

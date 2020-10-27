@@ -93,18 +93,18 @@ def default_config(override_params={}):
 
 
 def _process_model_params(config, params):
-    config.belief_size = params.get('belief_size', 256)
-    config.state_size = params.get('state_size', 256)
-    config.hidden_size = params.get('hidden_size', 512)
+    config.belief_size = params.get('belief_size', 32)
+    config.state_size = params.get('state_size', 32)
+    config.hidden_size = params.get('hidden_size', 64)
     config.embedding_size = params.get('embedding_size', 256)
     config.vec_embedding_size = params.get('vec_embedding_size', 8)
     config.img_embedding_size = params.get('img_embedding_size', 256)
     config.action_size = params.get('action_size', 7)  # TODO should get from some kind of env config
     config.activation = params.get('activation', 'leaky_relu')
     config.min_std_dev = params.get('min_std_dev', 0.1)
-    config.me_hidden_sizes = params.get('me_hidden_sizes', [1024, 1024])
+    config.me_hidden_sizes = params.get('me_hidden_sizes', [128, 128])
     config.gc_hidden_sizes = params.get('gc_hidden_sizes', [128, 128])
-    config.vec_hidden_sizes = params.get('vec_hidden_sizes', [32, 32])
+    config.vec_hidden_sizes = params.get('vec_hidden_sizes', [8, 8])
 
     
 def _set_models(config):
@@ -189,9 +189,9 @@ def _process_learning_params(config, params):
     
 
 def _process_data_params(config, params):
-    config.obs_modalities = params.get('obs_modalities', ['rgb'])
+    config.obs_modalities = params.get('obs_modalities', ['rgb', 'joint_positions'])
     config.act_modalities = params.get('act_modalities', ['delta_joint_positions'])
-    config.dec_modalities = params.get('dec_modalities', ['rgb'])
+    config.dec_modalities = params.get('dec_modalities', ['rgb', 'joint_positions'])
     config.chunk_size = params.get('chunk_size', 25)
     config.time_subsample = params.get('time_subsample', 1)
     config.n_goals = params.get('n_goals', 4) # TODO infer from data?

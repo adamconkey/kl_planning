@@ -34,6 +34,8 @@ class LatentPlanningLearner:
         self.checkpoint = None
         if checkpoint_filename:
             self._load_checkpoint(checkpoint_filename)
+            if params:
+                self.config.update_with_dict(params, False)
         elif params:
             self.config.update_with_dict(params, True) # Override anything passed from command line
 
