@@ -24,3 +24,4 @@ dependencies:
     - rospkg       # Needed to run ROS scripts
     - dataclasses  # Needed for python3.6, will be included in python3.7
     - pyquaternion
+    - pybullet

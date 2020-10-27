@@ -187,30 +187,6 @@ def process_time_batch(f, *tensors):
     return y
 
 
-def pos_from_homogeneous(T):
-    return T[:3, 3]
-
-
-def rot_from_homogeneous(T):
-    return T[:3, :3]
-
-
-def quat_from_homogeneous(T):
-    """
-    Converts rotation matrix from homogenous TF matrix to quaternion.
-    """
-    q = Quaternion(matrix=T) # w, x, y, z
-    q = np.array([q.x, q.y, q.z, q.w]) # Need to switch to x, y, z, w
-    return q
-
-
-def pose_to_homogeneous(p, q):
-    q = Quaternion(q[3], q[0], q[1], q[2]) # w, x, y, z
-    T = q.transformation_matrix
-    T[:3, 3] = p
-    return T
-
-
 def get_pose_from_h5(h5_file, base_link, end_link, start_idx=0, end_idx=None, subsample=1):
     """
     Computes pose of end link in base link frame. This is necessary since TF poses are all

@@ -129,4 +129,29 @@ def kl_dirac_mvn(dirac, mvn, device=torch.device('cuda')):
     t1 = torch.bmm(diff.unsqueeze(1), precision)
     kl = 0.5 * torch.bmm(t1, diff.unsqueeze(-1))
     return kl.squeeze()
-    
+
+
+
+def pos_from_homogeneous(T):
+    return T[:3, 3]
+
+
+def rot_from_homogeneous(T):
+    return T[:3, :3]
+
+
+def quat_from_homogeneous(T):
+    """
+    Converts rotation matrix from homogenous TF matrix to quaternion.
+    """
+    q = Quaternion(matrix=T) # w, x, y, z
+    q = np.array([q.x, q.y, q.z, q.w]) # Need to switch to x, y, z, w
+    return q
+
+
+def pose_to_homogeneous(p, q):
+    q = Quaternion(q[3], q[0], q[1], q[2]) # w, x, y, z
+    T = q.transformation_matrix
+    T[:3, 3] = p
+    return T
+
