@@ -39,6 +39,8 @@ class TrajectorySampleVisualizer:
         if costs:
             colors = vis_util.get_color_sequence(len(costs), 'coolwarm')
             colors = [list(c) + [1] for c in colors] # Add alpha
+        elif req.colors:
+            colors = [[c.r, c.g, c.b, c.a] for c in req.colors]
         else:
             colors = [[0, 0, 0, 1] for _ in range(samples.shape[1])]
         self.samples_msg = MarkerArray([self._get_marker(samples[:,i,:], colors[i], i, size)

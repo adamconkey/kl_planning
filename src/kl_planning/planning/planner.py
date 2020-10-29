@@ -19,7 +19,7 @@ class Planner:
     def plan_cem(self, env, start_dist, goal_dist, min_act, max_act, device,
                  horizon=10, n_iters=10, n_candidates=1000, n_elite=10,
                  n_components=2, kl_divergence=None, act_dist_type='gaussian',
-                 visualize=False, **kwargs):
+                 visualize=False, purge_bad_samples=False, **kwargs):
         """
         TODO: Introducing a distribution abstraction here would really clean things 
               up, instead of doing these switches everywhere on the distribution type.
@@ -44,41 +44,59 @@ class Planner:
             # act_mu = act_mu.view(1, 1, horizon * act_size).repeat(1, n_components, 1)
             # act_sigma = torch.ones(1, n_components, horizon * act_size)
             # act_dist = GaussianMixture(n_components, horizon * act_size, act_mu, act_sigma)
-            act_dist = GaussianMixture(n_components,
-                                       covariance_type='diag',
-                                       init_params='kmeans',
-                                       max_iter=10)
+            act_dist = GaussianMixture(n_components, covariance_type='diag',
+                                       init_params='kmeans', max_iter=10)
             act_dist.means_ = act_mu.numpy()
             act_dist.covariances_ = act_sigma.numpy()
             act_dist.weights_ = np.ones(n_components) / float(n_components)
             act_dist.precisions_cholesky_ = None
 
-        best_costs = []
-        worst_costs = []
         for _ in tqdm(range(n_iters), desc='CEM'):
             # Generate action delta samples
             if act_dist_type == 'gaussian':
                 noise = torch.randn(horizon, n_candidates, act_size, device=device)
                 act = act_mu + act_sigma * noise                
             elif act_dist_type == 'gmm':
-                act, component_labels = act_dist.sample(n_candidates)
-                act = torch.from_numpy(act).float()
-                act = act.view(horizon, n_candidates, act_size)
+                if purge_bad_samples:
+                    act = torch.zeros(horizon, 0, act_size, device=device)
+                    while act.size(1) < n_candidates:
+                        samples, labels = act_dist.sample(n_candidates)
+                        samples = torch.from_numpy(samples).float().to(device)
+                        samples = samples.view(horizon, n_candidates, act_size)
+                        good_samples = env.purge_bad_samples(samples, start_dist)
+                        act = torch.cat([act, good_samples], dim=1)
+                    if act.size(1) > n_candidates:
+                        act = act[:,:n_candidates,:]
+                else:
+                    act, labels = act_dist.sample(n_candidates)
+                    act = torch.from_numpy(act).float().to(device)
+                    act = act.view(horizon, n_candidates, act_size)
             act = torch.max(torch.min(act, max_act), min_act) # (horizon, candidates, act)
-            # print("ACT", act)
                 
             # Find top K low-cost action sequences
-            costs = env.cost(act, start_dist, goal_dist, kl_divergence, device=device, **kwargs)
+            costs = env.cost(act, start_dist, goal_dist, kl_divergence)
             topk_costs, topk_indices = costs.topk(n_elite, dim=-1, largest=False, sorted=True)
             elite = act[:, topk_indices]
-                        
-            # print("ELITE", elite)
 
             if visualize:
                 # means = torch.from_numpy(act_dist.means_).view(horizon, 2, -1)
                 # env.visualize_samples(start_dist.loc, means, size=0.07)
                 # env.visualize_samples(start_dist.loc, act, size=0.005)
-                env.visualize_samples(start_dist.loc, elite, topk_costs)
+                # rospy.sleep(1)
+                if act_dist_type == 'gmm':
+                    colors = []
+                    for label in labels[topk_indices.cpu().numpy()]:
+                        # TODO need to fix this
+                        colors.append([0.44, 0.7, 0.96, 1])
+                        
+                        # if label == 0:
+                        #     colors.append([0.44, 0.7, 0.96, 1])
+                        # else:
+                        #     colors.append([1, 0.7, 0.13, 1])
+                    env.visualize_samples(start_dist.loc, elite, colors=colors)
+                else:
+                    env.visualize_samples(start_dist.loc, elite, topk_costs)
+                # rospy.sleep(1)
 
                 
             # Update belief with new means and standard deviations
@@ -86,18 +104,9 @@ class Planner:
                 act_mu = elite.mean(dim=1, keepdim=True)
                 act_sigma = elite.std(dim=1, keepdim=True)
                 plan_return = act_mu.squeeze()
-                # print("MEAN", act_mu)
-                # print("PLAN RETURN", plan_return)
             elif act_dist_type == 'gmm':
-                elite = elite.view(n_elite, horizon * act_size).numpy()
+                elite = elite.view(n_elite, horizon * act_size).cpu().numpy()
                 act_dist.fit(elite)
                 plan_return = act_dist
-
-        #     best_costs.append(topk_costs[0].item())
-        #     worst_costs.append(topk_costs[-1].item())
-        # plt.plot(best_costs)
-        # plt.plot(worst_costs)
-        # plt.show()
-        # plt.close('all')
                 
         return plan_return

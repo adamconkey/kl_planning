@@ -6,13 +6,14 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 from time import time
 
-from kl_planning.util import file_util, math_util
+from kl_planning.util import file_util, math_util, vis_util
 from kl_planning.srv import SetPose, SetPoseRequest
 
 
 class Navigation2DEnvironment:
 
-    def __init__(self, config, m_projection=False, belief_dynamics_noise=0.02):
+    def __init__(self, config, m_projection=False, belief_dynamics_noise=0.02,
+                 device=torch.device('cuda')):
         self.object_config = config['objects']
         self.agent_config = config['agent']
         self.indicator_config = config['indicators']
@@ -22,6 +23,7 @@ class Navigation2DEnvironment:
 
         self.m_projection = m_projection
         self.belief_dynamics_noise = belief_dynamics_noise
+        self.device = device
         
         self._create_collision_checkers()
 
@@ -96,7 +98,7 @@ class Navigation2DEnvironment:
         T = actions.size(0)
         n_trajs = actions.size(1)
         start_state = start_state.repeat(n_trajs, 1)
-        trajs = torch.zeros(T+1, n_trajs, 3)
+        trajs = torch.zeros(T+1, n_trajs, 3, device=self.device)
 
         trajs[0] = start_state
         for t in range(T):
@@ -104,7 +106,7 @@ class Navigation2DEnvironment:
         return trajs
 
     def in_collision(self, q):
-        in_collision = torch.zeros(q.size(0), dtype=torch.bool)
+        in_collision = torch.zeros(q.size(0), dtype=torch.bool, device=self.device)
         for obj_id, checker in self.collision_checkers.items():
             obj_in_collision = checker(q)
             in_collision += obj_in_collision  # Boolean OR operation
@@ -118,15 +120,16 @@ class Navigation2DEnvironment:
         n_state = start_dist.loc.size(-1)
         n_sigma = 2 * n_state + 1
         
-        mus = [start_dist.loc.repeat(n_candidates, 1)]
-        sigmas = [start_dist.covariance_matrix.repeat(n_candidates, 1, 1)]
+        mus = [start_dist.loc.repeat(n_candidates, 1).to(self.device)]
+        sigmas = [start_dist.covariance_matrix.repeat(n_candidates, 1, 1).to(self.device)]
         sigma_points = []
 
         for t in range(len(act)):
             act_t = act[t].unsqueeze(1).repeat(1, n_sigma, 1)
             act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
             g = lambda x: self.dynamics(x, act_t, self.belief_dynamics_noise)
-            mu_prime, sigma_prime, Y = math_util.unscented_transform(mus[-1], sigmas[-1], g)
+            mu_prime, sigma_prime, Y = math_util.unscented_transform(mus[-1], sigmas[-1], g,
+                                                                     device=self.device)
             mus.append(mu_prime)
             sigmas.append(sigma_prime)
             sigma_points.append(Y)
@@ -141,7 +144,7 @@ class Navigation2DEnvironment:
             lambda_ = (t + 1) / float(T)
             # TODO for now diagonalizing as there is no general MVN implementation of KL
             if isinstance(goal_dist, torch.distributions.uniform.Uniform):
-                p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1))
+                p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1).to(self.device))
             else:
                 p_t = MultivariateNormal(mus[t], sigmas[t])
 
@@ -149,7 +152,7 @@ class Navigation2DEnvironment:
                 kl_cost_t = lambda_ * kl_divergence(goal_dist, p_t)
                 if isinstance(goal_dist, torch.distributions.uniform.Uniform):
                     # TODO scaling because uniform is huge, maybe parameterize this
-                    kl_cost_t = kl_cost_t.sum(dim=-1) #  / 10.0
+                    kl_cost_t = kl_cost_t.sum(dim=-1) # / 10.0
                 kl_cost += kl_cost_t
             else:
                 kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
@@ -163,16 +166,53 @@ class Navigation2DEnvironment:
             # lambda_ = (n_points - i) / n_points
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 100.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 100000.0
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += in_collision.sum(dim=1)
         cost += collision_cost
 
         return cost
 
-    def visualize_samples(self, start_state, samples, costs=None, size=0.03, sleep=0):
+    def purge_bad_samples(self, samples, start_dist):
+        """
+        This will discard any samples that have sigma points in collision. This is alternative
+        to accumulating cost for collisions so that you only take collision-free samples and
+        accumulate KL cost.
+
+        Returns only samples that have no sigma points in collision.
+        """
+        n_candidates = samples.size(1)
+        n_state = start_dist.loc.size(-1)
+        n_sigma = 2 * n_state + 1
+        
+        mus = [start_dist.loc.repeat(n_candidates, 1).to(self.device)]
+        sigmas = [start_dist.covariance_matrix.repeat(n_candidates, 1, 1).to(self.device)]
+        sigma_points = []
+        
+        for t in range(len(samples)):
+            sample_t = samples[t].unsqueeze(1).repeat(1, n_sigma, 1)
+            sample_t = sample_t.view(sample_t.size(0) * sample_t.size(1), -1)
+            g = lambda x: self.dynamics(x, sample_t, self.belief_dynamics_noise)
+            mu_prime, sigma_prime, Y = math_util.unscented_transform(mus[-1], sigmas[-1], g,
+                                                                     device=self.device)
+            mus.append(mu_prime)
+            sigmas.append(sigma_prime)
+            sigma_points.append(Y)
+
+        collision = 0
+        for i, Y in enumerate(sigma_points):
+            B = Y.size(0)
+            n_sigma = Y.size(1)
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1))
+            in_collision = in_collision.view(B, n_sigma)
+            collision += in_collision.sum(dim=-1)
+
+        return samples[:,collision == 0]
+        
+    def visualize_samples(self, start_state, samples, costs=None, colors=None, size=0.03, sleep=0):
         elite_samples = self.get_trajectory(start_state, samples)
-        vis_util.visualize_line_trajectory_samples(elite_samples, costs, size)
+        vis_util.visualize_line_trajectory_samples(elite_samples, costs=costs,
+                                                   colors=colors, size=size)
         if sleep > 0:
             rospy.sleep(sleep)
 

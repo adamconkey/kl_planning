@@ -3,7 +3,8 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /MeshDisplayCustom1
       Splitter Ratio: 0.507905125617981
     Tree Height: 726
   - Class: rviz/Selection
@@ -91,18 +92,18 @@ Visualization Manager:
     - Class: rviz_textured_quads/MeshDisplayCustom
       Enabled: true
       Image Topic: /image
-      Meters per pixel: 0.004399999976158142
+      Meters per pixel: 0.00430000014603138
       Name: MeshDisplayCustom
       Quad Frame: kl_img
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /visualization/trajectory_samples
       Name: Trajectory Samples
       Namespaces:
         {}
       Queue Size: 100
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 186; 189; 182
@@ -131,25 +132,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.202226638793945
+      Distance: 5.276715278625488
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.4358535408973694
-        Y: -0.002174548339098692
-        Z: 0.5269899964332581
+        X: -0.4843573570251465
+        Y: -0.016845926642417908
+        Z: 0.5037849545478821
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.124796748161316
+      Pitch: 1.1347967386245728
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.1435890197753906
+      Yaw: 3.1435892581939697
     Saved: ~
 Window Geometry:
   Displays:

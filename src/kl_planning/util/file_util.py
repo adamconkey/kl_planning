@@ -124,6 +124,8 @@ def save_pickle(data, filename):
         data (dict): Dictionary of data to be saved to pickle file.
         filename (str): Absolute path to pickle file that data will be saved to.
     """
+    if not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
     with open(filename, 'wb') as f:
         pickle.dump(data, f)
 

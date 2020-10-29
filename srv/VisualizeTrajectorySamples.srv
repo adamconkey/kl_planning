@@ -1,6 +1,7 @@
-float64[] samples  # Flattened array of samples corresponding with shape
-int64[] shape      # Shape of sample array for deserialization
-float64[] costs    # Costs associated with samples
-float64 size       # Size of line to be displayed
+float64[] samples            # Flattened array of samples corresponding with shape
+int64[] shape                # Shape of sample array for deserialization
+float64[] costs              # Costs associated with samples
+std_msgs/ColorRGBA[] colors  # Colors to explicitly color samples
+float64 size                 # Size of line to be displayed
 ---
 bool success

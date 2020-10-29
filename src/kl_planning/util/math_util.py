@@ -40,7 +40,7 @@ def unscented_transform(mu, sigma, g, beta=2, device=torch.device('cuda')):
     return mu_prime, sigma_prime, S
 
 
-def kl_gmm_gmm(p, q):
+def kl_gmm_gmm(p, q, device=torch.device('cuda')):
     """
     Computes approximate KL divergence between two GMMs. Either arg can be either 
     MultivariateNormal or GaussianMixture, and if any are MVN they get treated as
@@ -60,20 +60,21 @@ def kl_gmm_gmm(p, q):
 
     # Handle MVN/GMM for first arg, can be either
     if isinstance(p, MultivariateNormal):
-        mus = p.loc.unsqueeze(0)
-        sigmas = p.covariance_matrix.unsqueeze(0)
-        weights = torch.ones(1)
+        mus = p.loc.unsqueeze(0).to(device)
+        sigmas = p.covariance_matrix.unsqueeze(0).to(device)
+        weights = torch.ones(1, device=device)
     elif isinstance(p, GaussianMixture):
-        mus = p.mu_init.squeeze().unsqueeze(1).repeat(1, B, 1) # (k, b, n)
+        mus = p.mu_init.squeeze().unsqueeze(1).repeat(1, B, 1).to(device) # (k, b, n)
         sigmas = torch.diag_embed(p.var_init.squeeze()).unsqueeze(1).repeat(1, B, 1, 1) # (k, b, n, n)
-        weights = p.pi.squeeze()
+        sigmas = sigmas.to(device)
+        weights = p.pi.squeeze().to(device)
     else:
         raise TypeError("Unknown distribution type for first arg to KL gmm-gmm")
 
     n = mus.size(-1)
     n_components = len(weights)
 
-    kl_approx = torch.zeros(n_components, B)
+    kl_approx = torch.zeros(n_components, B, device=device)
     for k in range(n_components):
         p_log_p = -0.5 * (torch.logdet(sigmas[k]) + n)
         # Approximate p*log(q) using sigma point method in [1]
