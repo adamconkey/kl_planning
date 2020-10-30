@@ -166,7 +166,7 @@ class Navigation2DEnvironment:
             # lambda_ = (n_points - i) / n_points
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 100000.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 10.0
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += in_collision.sum(dim=1)
         cost += collision_cost

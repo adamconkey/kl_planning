@@ -53,6 +53,7 @@ if __name__ == '__main__':
     else:
         belief_observation_noise = torch.tensor(args.belief_observation_noise)
 
+    kl_divergence = torch.distributions.kl.kl_divergence
     if config['goal_distribution'] == 'gaussian':
         goal_states = env.get_goal_states()
         goal_covs = env.get_goal_covariances()
@@ -94,18 +95,27 @@ if __name__ == '__main__':
     max_act = torch.tensor([np.tan(config['agent']['max_phi']).astype(np.float32),
                             config['agent']['max_v'], config['agent']['max_time']]).to(device)
 
-    all_log_states = []
+    log = {'states': [], 'kl_divergence': []}
     for _ in range(args.n_mpc_runs):
-        start_mu = start_state
-        start_sigma = torch.diag(belief_observation_noise)
+        start_mu = start_state.to(device)
+        start_sigma = torch.diag(belief_observation_noise).to(device)
         start_dist = torch.distributions.MultivariateNormal(start_mu, start_sigma)
     
         log_states = []
+        log_kl_divergence = []
         true_state = start_state
         
-        for k in range(20):
+        for k in range(60):
+            if args.visualize_png_overlay:
+                vis_util.visualize_gmm_goals([goal_dist.loc], [goal_dist.covariance_matrix])
             env.set_agent_location(true_state.cpu().numpy())
             log_states.append(true_state.cpu().numpy())
+            # Log KL divergence
+            if args.m_projection:
+                kl = kl_divergence(goal_dist, start_dist)
+            else:
+                kl = kl_divergence(start_dist, goal_dist)
+            log_kl_divergence.append(kl.item())
             
             plan_return = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act, device,
                                            args.horizon, args.n_iters, args.n_candidates,
@@ -133,7 +143,6 @@ if __name__ == '__main__':
                         goal_mus = mus.squeeze()
                         goal_sigmas = torch.diag_embed(sigmas.squeeze(), dim1=-2, dim2=-1)
                         vis_util.visualize_gmm_goals(goal_mus, goal_sigmas)
-                sys.exit()
             else:
                 act = plan_return
                 if args.visualize_png_overlay:
@@ -154,14 +163,16 @@ if __name__ == '__main__':
                                                          uniform_lows=lows, uniform_highs=highs)
                     else:
                         vis_util.visualize_gaussian_plan(mu, sigma, act, env, state_size)
-                            
+                    rospy.sleep(2)
+                        
             # Update current position for next planning step
             true_state = env.dynamics(true_state.unsqueeze(0), act[0].unsqueeze(0),
                                       noise_gain=args.real_dynamics_noise).squeeze()
         
             start_dist.loc = true_state
 
-        all_log_states.append(np.stack(log_states))
+        log['states'].append(np.stack(log_states))
+        log['kl_divergence'].append(log_kl_divergence)
 
     if args.save_path:
-        file_util.save_pickle(all_log_states, args.save_path)
+        file_util.save_pickle(log, args.save_path)
