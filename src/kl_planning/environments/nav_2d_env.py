@@ -1,10 +1,9 @@
 import sys
 import rospy
 import torch
-from torch.distributions import MultivariateNormal, Normal
+from torch.distributions import MultivariateNormal, Normal, Uniform
 from scipy.spatial.transform import Rotation as R
 import numpy as np
-from time import time
 
 from kl_planning.util import file_util, math_util, vis_util
 from kl_planning.srv import SetPose, SetPoseRequest
@@ -143,16 +142,15 @@ class Navigation2DEnvironment:
             # Increasing contribution of KL cost as time increases
             lambda_ = (t + 1) / float(T)
             # TODO for now diagonalizing as there is no general MVN implementation of KL
-            if isinstance(goal_dist, torch.distributions.uniform.Uniform):
+            if isinstance(goal_dist, Uniform):
                 p_t = Normal(mus[t], torch.diagonal(sigmas[t], dim1=-2, dim2=-1).to(self.device))
             else:
                 p_t = MultivariateNormal(mus[t], sigmas[t])
 
             if self.m_projection:
                 kl_cost_t = lambda_ * kl_divergence(goal_dist, p_t)
-                if isinstance(goal_dist, torch.distributions.uniform.Uniform):
-                    # TODO scaling because uniform is huge, maybe parameterize this
-                    kl_cost_t = kl_cost_t.sum(dim=-1) # / 10.0
+                if isinstance(goal_dist, Uniform):
+                    kl_cost_t = kl_cost_t.sum(dim=-1)
                 kl_cost += kl_cost_t
             else:
                 kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
@@ -162,11 +160,9 @@ class Navigation2DEnvironment:
         collision_cost = 0
         n_points = float(len(sigma_points))
         for i, Y in enumerate(sigma_points):
-            # # Decreasing contribution of collision cost as time increases
-            # lambda_ = (n_points - i) / n_points
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 10.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 100.0
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += in_collision.sum(dim=1)
         cost += collision_cost

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="scene"/>
+  <arg name="rviz_config" default="$(find kl_planning)/config/rviz/arm.rviz"/>
+
+  <!-- ===================================================================================== -->
+
+  <param name="scene" value="$(arg scene)"/>
+  
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(arg rviz_config)"/>
+
+  <node name="scene_manager" pkg="kl_planning" type="scene_manager.py" output="screen">
+    <param name="config_filename" value="arm/$(arg scene).yaml"/>
+    <param name="env_type"        value="arm"/>
+  </node>
+
+  <arg name="urdf_path" value="$(find kl_planning)/src/kl_planning/environments/resources"/>
+  <param name="robot_description"
+	 command="$(find xacro)/xacro '$(arg urdf_path)/panda.urdf' --inorder"/>
+        
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+  
+</launch>

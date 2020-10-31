@@ -13,6 +13,7 @@
 
   <node name="scene_manager" pkg="kl_planning" type="scene_manager.py" output="screen">
     <param name="config_filename" value="nav_2d/$(arg scene).yaml"/>
+    <param name="env_type"        value="nav_2d"/>
   </node>
 
   <node name="world_frame_publisher" pkg="tf" type="static_transform_publisher"

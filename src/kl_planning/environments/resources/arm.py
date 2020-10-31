@@ -31,6 +31,10 @@ class Arm:
         self.ee_index = ee_index
         self.modified_DH = modified_DH
 
+        self.robot_id = pybullet_util.load_urdf(urdf_path)
+        for i in range(self.num_joints):
+            pybullet.resetJointState(self.robot_id, i, 0)
+
     def fk(self, thetas):
         """
         Computes forward kinematics.

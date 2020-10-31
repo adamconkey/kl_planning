@@ -7,7 +7,7 @@ import rospy
 import rospkg
 from visualization_msgs.msg import MarkerArray
 
-from kl_planning.environments import Navigation2DEnvironment
+from kl_planning.environments import Navigation2DEnvironment, ArmEnvironment
 from kl_planning.util import ros_util, file_util
 from kl_planning.srv import SetPose, SetPoseResponse
 
@@ -29,9 +29,11 @@ class SceneManager:
     def create_scene(self, env):
         self.env = env
         self.scene_msg = ros_util.get_marker_array_msg(env.object_config)
-        self.start_goal_msg = ros_util.get_marker_array_msg(env.indicator_config)
+        if env.indicator_config:
+            self.start_goal_msg = ros_util.get_marker_array_msg(env.indicator_config)
         self._add_goal_text_markers()
-        self.agent_msg = ros_util.get_marker_array_msg({'agent': env.agent_config})
+        if 'type' in env.agent_config:
+            self.agent_msg = ros_util.get_marker_array_msg({'agent': env.agent_config})
                 
     def run(self):
         rospy.loginfo("Visualizing scene")
@@ -74,6 +76,7 @@ class SceneManager:
 if __name__ == '__main__':
     rospy.init_node('create_scene')
     config_filename = rospy.get_param('~config_filename')
+    env_type = rospy.get_param('~env_type')
     r = rospkg.RosPack()
     path = r.get_path('kl_planning')
     config_path = os.path.join(path, 'config', 'scenes', config_filename)
@@ -81,7 +84,13 @@ if __name__ == '__main__':
     config = file_util.load_yaml(config_path)
 
     manager = SceneManager()
-    env = Navigation2DEnvironment(config)
+    if env_type == 'nav_2d':
+        env = Navigation2DEnvironment(config)
+    elif env_type == 'arm':
+        env = ArmEnvironment(config)
+    else:
+        rospy.logerr(f"Unknown environment type: {env_type}")
+        sys.exit(1)
     rospy.on_shutdown(manager.shutdown)
     manager.create_scene(env)
     manager.run()

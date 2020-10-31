@@ -10,7 +10,7 @@ from kl_planning.util import pybullet_util, math_util
 
 class CollisionChecker:
 
-    def __init__(self, arm=None, env=[], debug=False):
+    def __init__(self, arm=None, env=[], start_arm_config=[], debug=False):
         """
         Pybullet collision checker.
 
@@ -18,24 +18,22 @@ class CollisionChecker:
             arm (Arm): Arm instance for computing kinematics and visualization.
             debug (bool): Set true to run basic debug functionality.
         """
+        self.arm = arm
+        if debug:
+            self.slider_ids = []
+            for i in range(arm.num_joints):
+                if start_arm_config:
+                    slider_id = pybullet_util.add_slider("Joint {}".format(i), -np.pi, np.pi,
+                                                         start_arm_config[i])
+                else:
+                    slider_id = pybullet_util.add_slider("Joint {}".format(i), -np.pi, np.pi, 0)
+                self.slider_ids.append(slider_id)
+
         self.collision_objects = []
+        self.add_collision_objects(env)
 
         if debug:
-            pybullet.connect(pybullet.GUI)
-            self.slider_ids = []
-        else:
-            pybullet.connect(pybullet.DIRECT)
-            
-        if arm is not None:
-            self.arm = arm
-            self.robot_id = pybullet_util.load_urdf(arm.urdf_path)
-            for i in range(arm.num_joints):
-                pybullet.resetJointState(self.robot_id, i, 0)
-                if debug:
-                    slider_id = pybullet_util.add_slider("Joint {}".format(i), -np.pi, np.pi, 0)
-                    self.slider_ids.append(slider_id)
-                    
-        self.add_collision_objects(env)
+            self._run_debug()
 
     def add_collision_objects(self, env, client=pybullet):
         for config in env:
@@ -44,8 +42,13 @@ class CollisionChecker:
                     raise ValueError("Sphere config should be tuple (GEOM, radius, [x,y,z])")
                 geom, radius, origin = config
                 self.add_sphere(radius, origin, client)
+            elif config[0] == pybullet.GEOM_CYLINDER:
+                if len(config) != 4:
+                    raise ValueError("Cylinder config should be tuple (GEOM, radius, height, [x,y,z]")
+                geom, radius, height, origin = config
+                self.add_cylinder(radius, height, origin)
             else:
-                raise ValueError("Supported GEOM types: [pybullet.GEOM_SPHERE]")
+                raise ValueError("Supported GEOM types: [GEOM_SPHERE, GEOM_CYLINDER]")
 
     def add_sphere(self, radius, origin=[0, 0, 0], client=pybullet):
         """
@@ -62,6 +65,10 @@ class CollisionChecker:
         shape_id, obj_id = pybullet_util.add_sphere(radius, origin, client)
         self.collision_objects.append(obj_id)
 
+    def add_cylinder(self, radius, height, origin=[0, 0, 0], client=pybullet):
+        shape_id, obj_id = pybullet_util.add_cylinder(radius, height, origin, client)
+        self.collision_objects.append(obj_id)
+
     def in_contact(self, epsilon=0.0):
         """
         Tests if robot is in collision with an object.
@@ -75,7 +82,7 @@ class CollisionChecker:
         """
         in_contact = False
         for obj_id in self.collision_objects:
-            points = pybullet.getClosestPoints(obj_id, self.robot_id, epsilon)
+            points = pybullet.getClosestPoints(obj_id, self.arm.robot_id, epsilon)
             in_contact = in_contact or len(points) > 0
         return in_contact
 
@@ -92,12 +99,12 @@ class CollisionChecker:
         """
         min_dist = sys.maxsize
         for obj_id in self.collision_objects:
-            points = pybullet.getClosestPoints(obj_id, self.robot_id, max_dist)
+            points = pybullet.getClosestPoints(obj_id, self.arm.robot_id, max_dist)
             obj_min_dist = min([p[8] for p in points])  # Index 8 is distance in point structure
             min_dist = min(min_dist, obj_min_dist)
         return min_dist
             
-    def run_debug(self):
+    def _run_debug(self):
         """
         Simple debug test of collision/distance functionality.
 
@@ -105,14 +112,10 @@ class CollisionChecker:
         around with sliders to see it colliding with stuff.
         """
         while True:
-            thetas = []
+            # Update joint state based on slider values
             for i in range(self.arm.num_joints):
                 theta = pybullet.readUserDebugParameter(self.slider_ids[i])
-                pybullet.resetJointState(self.robot_id, i, theta)
-                thetas.append(theta)
-
-            T = self.arm.fk(torch.DoubleTensor(thetas).unsqueeze(1))
-            pos = math_util.pos_from_homogeneous(T)
+                pybullet.resetJointState(self.arm.robot_id, i, theta)
             print('-' * 40)
             print("IN CONTACT", self.in_contact())
             print("DIST", self.dist_to_nearest_obstacle())
@@ -122,4 +125,3 @@ if __name__ == '__main__':
     arm = Panda()
     env = [(pybullet.GEOM_SPHERE, 0.2, [0.4, 0, 0.8])]
     checker = CollisionChecker(arm, env, debug=True)
-    checker.run_debug()

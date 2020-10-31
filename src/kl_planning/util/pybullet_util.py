@@ -47,7 +47,6 @@ def add_mesh(position, orientation, filename, shift=[0, 0, 0],
     return mesh_id
 
 
-
 def add_sphere(radius, origin=[0, 0, 0], client=pybullet):
     """
     Adds sphere collision object to Pybullet environment.
@@ -67,7 +66,14 @@ def add_sphere(radius, origin=[0, 0, 0], client=pybullet):
                                     baseCollisionShapeIndex=shape_id,
                                     basePosition=origin)
     return shape_id, obj_id
-    
+
+
+def add_cylinder(radius, height, origin=[0, 0, 0], client=pybullet):
+    shape_id = client.createCollisionShape(pybullet.GEOM_CYLINDER, radius=radius, height=height)
+    obj_id = client.createMultiBody(baseMass=0,
+                                    baseCollisionShapeIndex=shape_id,
+                                    basePosition=origin)
+    return shape_id, obj_id
 
 
 def load_urdf(urdf_path, origin=[0, 0, 0], client=pybullet):
