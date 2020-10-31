@@ -113,12 +113,17 @@ class CollisionChecker:
         """
         while True:
             # Update joint state based on slider values
+            thetas = []
             for i in range(self.arm.num_joints):
                 theta = pybullet.readUserDebugParameter(self.slider_ids[i])
+                thetas.append(theta)
                 pybullet.resetJointState(self.arm.robot_id, i, theta)
+            p, q = self.arm.fk(torch.tensor(thetas).unsqueeze(0))
             print('-' * 40)
-            print("IN CONTACT", self.in_contact())
-            print("DIST", self.dist_to_nearest_obstacle())
+            # print("IN CONTACT", self.in_contact())
+            # print("DIST", self.dist_to_nearest_obstacle())
+            print("P", p.squeeze())
+            print("Q", q.squeeze())
 
 
 if __name__ == '__main__':

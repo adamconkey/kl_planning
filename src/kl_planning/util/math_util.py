@@ -156,3 +156,38 @@ def pose_to_homogeneous(p, q):
     T[:3, 3] = p
     return T
 
+
+def rot_from_quat(q):
+    """
+    Assumes batched (B, 4) where quaternion is (x, y, z, w). Assumes unit quaternion.
+
+    https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Quaternion-derived_rotation_matrix
+    """
+    q_i = q[:,0]
+    q_j = q[:,1]
+    q_k = q[:,2]
+    q_r = q[:,3]
+
+    R = torch.stack([
+        torch.stack([1. - 2.*(q_j**2 + q_k**2), 2.*(q_i*q_j - q_k*q_r), 2.*(q_i*q_k + q_j*q_r)]),
+        torch.stack([2.*(q_i*q_j + q_k*q_r), 1. - 2.*(q_i**2 + q_k**2), 2.*(q_j*q_k - q_i*q_r)]),
+        torch.stack([2.*(q_i*q_k - q_j*q_r), 2.*(q_j*q_k + q_i*q_r), 1. - 2.*(q_i**2 + q_j**2)])
+    ])
+
+    # TODO I don't understand immediately why the batch ends up in the last dim instead of first
+    return R.transpose(0, 2).transpose(1, 2)
+
+
+if __name__ == '__main__':
+    from pyquaternion import Quaternion
+    q = Quaternion.random()
+    actual = q.rotation_matrix
+
+    qe = q.elements
+    q_input = torch.tensor([qe[1], qe[2], qe[3], qe[0]])
+    R = rot_from_quat(torch.stack([q_input, q_input]))
+
+    print("R", R.shape)
+    
+    print("COMPUTED\n", R.numpy())
+    print("ACTUAL\n", actual)

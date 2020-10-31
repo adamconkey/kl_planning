@@ -36,9 +36,13 @@ def get_marker_msg(obj_data, marker_id=0):
         marker.type = Marker.CUBE
     elif obj_data['type'] == 'cylinder':
         marker.type = Marker.CYLINDER
+    elif obj_data['type'] == 'sphere':
+        marker.type = Marker.SPHERE
     elif obj_data['type'] == 'text':
         marker.type = Marker.TEXT_VIEW_FACING
         marker.text = obj_data['text']
+    else:
+        raise ValueError(f"Unknown marker type: {obj_data['type']}")
     marker.action = Marker.MODIFY
     marker.pose.position.x = obj_data['position'][0]
     marker.pose.position.y = obj_data['position'][1]

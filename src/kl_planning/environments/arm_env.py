@@ -20,9 +20,15 @@ class ArmEnvironment:
         self.agent_config = config['agent']
         self.start_config = config['start']
         self.goal_config = config['goals']
-        self.indicator_config = None
+        self.indicator_config = config['indicators']
         self.state_size = len(self.start_config['state'])
 
+        # TODO taking one explicitly, this won't work if you have multiple goals
+        self.desired_position = torch.tensor(self.goal_config['goal']['position'])
+        self.desired_position = self.desired_position.unsqueeze(0).to(device)
+        self.desired_orientation = torch.tensor(self.goal_config['goal']['orientation'])
+        self.desired_orientation = self.desired_orientation.unsqueeze(0).to(device)
+        
         self.m_projection = m_projection
         self.belief_dynamics_noise = belief_dynamics_noise
         self.device = device
@@ -43,6 +49,7 @@ class ArmEnvironment:
         # ROS
         self.joint_state = JointState()
         self.joint_state.name = [f'panda_joint{i}' for i in range(1,8)]
+        self.joint_state.name += [f'panda_finger_joint{i}' for i in [1,2]]
         self.joint_state.position = [0] * len(self.joint_state.name)
         self.joint_state_pub = rospy.Publisher("/joint_states", JointState, queue_size=1)
         rospy.sleep(1)
@@ -59,7 +66,7 @@ class ArmEnvironment:
         return [v['covariance'] for v in self.goal_config.values()]
 
     def set_agent_location(self, q):
-        self.joint_state.position = q.tolist()
+        self.joint_state.position = q.tolist() + [0.04, 0.04] # Add gripper finger positions
         self.joint_state.header.stamp = rospy.Time.now()
         self.joint_state_pub.publish(self.joint_state)
     
@@ -120,6 +127,9 @@ class ArmEnvironment:
                 kl_cost += kl_cost_t
             else:
                 kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
+
+        # print("KL", kl_cost)
+        
         cost += kl_cost
             
         # Compute collision costs based on sigma points
@@ -128,22 +138,49 @@ class ArmEnvironment:
         for i, Y in enumerate(sigma_points):
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 10.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) # TODO parameterize
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += in_collision.sum(dim=1)
-        cost += collision_cost
+        cost += collision_cost * 10000.0
+
+        # TODO trying a cost on desired EE pose
+        if self.desired_position is not None and self.desired_orientation is not None:
+            ee_cost = 0
+            for i, Y in enumerate(sigma_points):
+                lambda_ = (i + 1) / float(len(sigma_points))
+                B = Y.size(0)
+                n_sigma = Y.size(1)
+                ps, qs = self.arm.fk(Y.view(B * n_sigma, -1))
+                ee_cost += lambda_ * self.ee_pose_error(ps, qs).view(B, n_sigma).sum(dim=1)
+
+            cost += ee_cost * 10.0  # TODO figure out weighting
+
+        # print("EE COST", ee_cost)
 
         return cost
+
+    def ee_pose_error(self, ps, qs):
+        """
+        ps (B, 3)
+        qs (B, 4)
+        """
+        B = ps.size(0)
+        p_desired = self.desired_position.repeat(B, 1)
+        q_desired = self.desired_orientation.repeat(B, 1)
+        p_error = self.arm.position_error(p_desired, ps)
+        # q_error = self.arm.orientation_error(q_desired, qs)
+        error = p_error # + q_error
+        return error
 
     def visualize_samples(self, start_state, samples, costs=None):
         pass
 
     def _create_collision_objects(self):
-        # return [(pybullet.GEOM_SPHERE, 0.2, [0.4, 0, 0.8])]
-        # return [(pybullet.GEOM_CYLINDER, 0.2, 1.0, [0.4, 0, 0.8])]
         objects = []
         for obj_id, obj_data in self.object_config.items():
             if obj_data['type'] == 'cylinder':
                 objects.append((pybullet.GEOM_CYLINDER, obj_data['radius'],
                                 obj_data['height'], obj_data['position']))
+            else:
+                raise ValueError(f"Unknown collision object type: {obj_data['type']}")
         return objects

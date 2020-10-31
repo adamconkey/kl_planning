@@ -4,6 +4,7 @@ import sys
 import rospy
 import rospkg
 import torch
+from torch.distributions.multivariate_normal import MultivariateNormal
 import numpy as np
 import argparse
 
@@ -20,8 +21,8 @@ if __name__ == '__main__':
     parser.add_argument('--belief_observation_noise', type=float, nargs='+', default=[0.001])
     parser.add_argument('--cem_distribution', type=str, default='gaussian', choices=['gaussian'])
     parser.add_argument('--horizon', type=int, default=5)
-    parser.add_argument('--n_iters', type=int, default=5)
-    parser.add_argument('--n_candidates', type=int, default=20)
+    parser.add_argument('--n_iters', type=int, default=3)
+    parser.add_argument('--n_candidates', type=int, default=40)
     parser.add_argument('--n_elite', type=int, default=5)
     parser.add_argument('--m_projection', action='store_true')
     parser.add_argument('--force_dirac_identity_precision', action='store_true')
@@ -83,6 +84,9 @@ if __name__ == '__main__':
         goal_state = goal_state.unsqueeze(0).repeat(args.n_candidates, 1).to(device)
         goal_dist = DiracDelta(goal_state, args.force_dirac_identity_precision)
         kl_divergence = math_util.kl_dirac_mvn
+        # Creating one also for checking one state for logging
+        log_goal_dist = DiracDelta(goal_dist.state[0].unsqueeze(0),
+                                   args.force_dirac_identity_precision)
     else:
         ui_util.print_error(f"Unknown goal distribution type: {config['goal_distribution']}")
         sys.exit(0)
@@ -100,17 +104,23 @@ if __name__ == '__main__':
         log_kl_divergence = []
         true_state = start_state
         
-        for k in range(60):
+        for k in range(200):
             if rospy.is_shutdown():
                 sys.exit(0)
             env.set_agent_location(true_state.cpu().numpy())
             log_states.append(true_state.cpu().numpy())
             # Log KL divergence
-            if args.m_projection:
-                kl = kl_divergence(goal_dist, start_dist)
-            else:
-                kl = kl_divergence(start_dist, goal_dist)
-            log_kl_divergence.append(kl.item())
+            if args.save_path:
+                s_t = MultivariateNormal(start_dist.loc.unsqueeze(0),
+                                         start_dist.covariance_matrix.unsqueeze(0))
+                if m_projection:
+                    if config['goal_distribution'] == 'dirac_delta':
+                        kl = kl_divergence(log_goal_dist, s_t)
+                    else:
+                        kl = kl_divergence(goal_dist, s_t)
+                else:
+                    kl = kl_divergence(s_t, goal_dist)
+                log_kl_divergence.append(kl.item())
             
             act = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act, device,
                                    args.horizon, args.n_iters, args.n_candidates,

@@ -1,0 +1,82 @@
+objects:
+  obstacle1:
+    type: cylinder
+    radius: 0.075
+    length: 0.1
+    width: 0.1
+    height: 1.0
+    position:
+      - 0.3
+      - 0.0
+      - 0.5
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0.2
+      - 0.4
+      - 0.6
+      - 1
+agent:
+  max_delta: 0.1
+start:
+  state:
+    -  0.0
+    - -1.323
+    -  0.0
+    - -1.885
+    -  0.0
+    -  1.653
+    -  0.794
+indicators:
+  goal:
+    type: sphere
+    length: 0.075
+    width: 0.075
+    height: 0.075
+    position:
+      - 0.52085
+      - 0.0
+      - 0.64820
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0.0
+      - 0.6
+      - 0.33
+      - 0.9
+goals:
+  goal:
+    state:
+      -  0.0
+      -  -0.132
+      -  0.0
+      -  -1.687
+      -  0.0
+      -  1.653
+      -  0.794
+    covariance:
+      - 0.5
+      - 0.5
+      - 0.5
+      - 0.5
+      - 0.5
+      - 0.5
+      - 0.5
+    position:
+      - 0.52085
+      - 0.0
+      - 0.64820
+    orientation:
+      - 1.0
+      - 0
+      - 0
+      - 0
+goal_distribution: gaussian
