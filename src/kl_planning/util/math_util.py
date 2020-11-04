@@ -1,6 +1,10 @@
 import sys
+import numpy as np
 import torch
 from torch.distributions.multivariate_normal import MultivariateNormal
+from pyquaternion import Quaternion
+from scipy import interpolate
+from geometry_msgs.msg import Pose
 
 from kl_planning.distributions import GaussianMixture, DiracDelta
 from kl_planning.util import ui_util
@@ -178,8 +182,47 @@ def rot_from_quat(q):
     return R.transpose(0, 2).transpose(1, 2)
 
 
+def interpolate_poses(start_pose, end_pose, n_points):
+    # Interpolate position
+    s = start_pose.position
+    e = end_pose.position
+    xs_f = interpolate.interp1d([0, 1], [s.x, e.x])
+    ys_f = interpolate.interp1d([0, 1], [s.y, e.y])
+    zs_f = interpolate.interp1d([0, 1], [s.z, e.z])
+    ts = np.linspace(0, 1, n_points)
+    xs = xs_f(ts)
+    ys = ys_f(ts)
+    zs = zs_f(ts)
+
+    # Interpolate orientation
+    wp1 = start_pose.orientation
+    wp2 = end_pose.orientation
+    # We don't want to interpolate if they're already equal, will cause divide by zero
+    wp1_arr = np.array([wp1.w, wp1.x, wp1.y, wp1.z])
+    wp2_arr = np.array([wp2.w, wp2.x, wp2.y, wp2.z])
+    if np.allclose(wp1_arr, wp2_arr):
+        qs = [wp1_arr for _ in range(len(ts))]
+    else:
+        q1 = Quaternion(x=wp1.x, y=wp1.y, z=wp1.z, w=wp1.w)
+        q2 = Quaternion(x=wp2.x, y=wp2.y, z=wp2.z, w=wp2.w)
+        qs = Quaternion.intermediates(q1, q2, len(ts), include_endpoints=True)
+        qs = [q.elements for q in qs]  # getting list form generator
+
+    interp_points = []
+    for i in range(len(ts)):
+        p = Pose()
+        p.position.x = xs[i]
+        p.position.y = ys[i]
+        p.position.z = zs[i]
+        p.orientation.x = qs[i][1]
+        p.orientation.y = qs[i][2]
+        p.orientation.z = qs[i][3]
+        p.orientation.w = qs[i][0]
+        interp_points.append(p)
+    return interp_points
+    
+
 if __name__ == '__main__':
-    from pyquaternion import Quaternion
     q = Quaternion.random()
     actual = q.rotation_matrix
 

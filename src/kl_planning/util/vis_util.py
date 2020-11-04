@@ -121,7 +121,7 @@ def visualize_gmm_goals(mus, sigmas, save_path='/tmp/img.png'):
     display_rviz_img(save_path)
     
 
-def visualize_gmm_plan(start_mu, start_sigma, plan_dist, env, state_size, horizon,
+def visualize_gmm_plan(start_mu, start_sigma, plan_dist, env, horizon,
                        act_size, goal_mus=None, goal_sigmas=None,
                        temp_img_filename='/tmp/kl_img.png', device=torch.device('cuda')):
     mus = [[start_mu] for _ in range(plan_dist.n_components)]
@@ -130,7 +130,7 @@ def visualize_gmm_plan(start_mu, start_sigma, plan_dist, env, state_size, horizo
     for i, act in enumerate(plan_dist.means_):
         act = torch.from_numpy(act).view(horizon, act_size).to(device)
         for t in range(len(act)):
-            act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * state_size + 1, 1)
+            act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * env.state_size + 1, 1)
             act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
             g = lambda x: env.dynamics(x, act_t)
             mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[i][-1], sigmas[i][-1], g)
@@ -143,14 +143,14 @@ def visualize_gmm_plan(start_mu, start_sigma, plan_dist, env, state_size, horizo
     display_rviz_img(temp_img_filename)
         
         
-def visualize_gaussian_plan(start_mu, start_sigma, act, env, state_size, goal_mu=None,
+def visualize_gaussian_plan(start_mu, start_sigma, act, env, goal_mu=None,
                             goal_sigma=None, uniform_lows=None, uniform_highs=None,
                             temp_img_filename='/tmp/kl_img.png'):
     mus = [start_mu]
     sigmas = [start_sigma]
     
     for t in range(len(act)):
-        act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * state_size + 1, 1)
+        act_t = act[t].unsqueeze(0).unsqueeze(0).repeat(1, 2 * env.state_size + 1, 1)
         act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
         g = lambda x: env.dynamics(x, act_t)
         mu_prime, sigma_prime, _ = math_util.unscented_transform(mus[-1], sigmas[-1], g)

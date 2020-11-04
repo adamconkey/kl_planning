@@ -81,7 +81,7 @@ class Planner:
             if visualize:
                 # means = torch.from_numpy(act_dist.means_).view(horizon, 2, -1)
                 # env.visualize_samples(start_dist.loc, means, size=0.07)
-                # env.visualize_samples(start_dist.loc, act, size=0.005)
+
                 # rospy.sleep(1)
                 if act_dist_type == 'gmm':
                     colors = []
@@ -96,6 +96,7 @@ class Planner:
                     env.visualize_samples(start_dist.loc, elite, colors=colors)
                 else:
                     env.visualize_samples(start_dist.loc, elite, topk_costs)
+                    # env.visualize_samples(start_dist.loc, act, size=0.005)
                 # rospy.sleep(1)
 
                 

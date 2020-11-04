@@ -8,14 +8,15 @@ import rospkg
 from visualization_msgs.msg import MarkerArray
 
 from kl_planning.environments import Navigation2DEnvironment, ArmEnvironment
-from kl_planning.util import ros_util, file_util
+from kl_planning.util import ros_util, file_util, math_util
 from kl_planning.srv import SetPose, SetPoseResponse
 
 
 class SceneManager:
 
-    def __init__(self, rate=100):
+    def __init__(self, rate=500, n_interpolation_points=100):
         self.rate = rospy.Rate(rate)
+        self.n_interpolation_points = n_interpolation_points
         self.scene_msg = None
         self.start_goal_msg = None
         self.agent_msg = None
@@ -50,7 +51,14 @@ class SceneManager:
         rospy.loginfo("Exiting")
 
     def _update_agent_location(self, req):
-        self.agent_msg.markers[0].pose = req.pose
+        if req.interpolate:
+            poses = math_util.interpolate_poses(self.agent_msg.markers[0].pose, req.pose,
+                                                self.n_interpolation_points)
+            for pose in poses:
+                self.agent_msg.markers[0].pose = pose
+                self.rate.sleep()
+        else:
+            self.agent_msg.markers[0].pose = req.pose
         return SetPoseResponse(success=True)
 
     def _add_goal_text_markers(self):

@@ -47,8 +47,9 @@ class Navigation2DEnvironment:
         """
         return self.goal_config['goal']['low'], self.goal_config['goal']['high']
         
-    def set_agent_location(self, pose):
+    def set_agent_location(self, pose, interpolate=True):
         req = SetPoseRequest()
+        req.interpolate = interpolate
         req.pose.position.x = pose[0]
         req.pose.position.y = pose[1]
         req.pose.position.z = 0.01 # TODO hard-code
@@ -206,9 +207,8 @@ class Navigation2DEnvironment:
         return samples[:,collision == 0]
         
     def visualize_samples(self, start_state, samples, costs=None, colors=None, size=0.03, sleep=0):
-        elite_samples = self.get_trajectory(start_state, samples)
-        vis_util.visualize_line_trajectory_samples(elite_samples, costs=costs,
-                                                   colors=colors, size=size)
+        samples = self.get_trajectory(start_state, samples)
+        vis_util.visualize_line_trajectory_samples(samples, costs=costs, colors=colors, size=size)
         if sleep > 0:
             rospy.sleep(sleep)
 
