@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 import os
+import sys
 import pickle
 import argparse
 import rospy
 import rospkg
+import numpy as np
+from scipy import interpolate
 from matplotlib import colors
 from moveit_msgs.msg import DisplayRobotState, DisplayTrajectory, RobotTrajectory, ObjectColor
 from trajectory_msgs.msg import JointTrajectoryPoint
@@ -59,6 +62,7 @@ if __name__ == '__main__':
     parser.add_argument('--scene', type=str, required=True)
     parser.add_argument('--end_idx', type=int, default=None)
     parser.add_argument('--subsample', type=int, default=1)
+    parser.add_argument('--interpolate', type=int, default=0)
     args = parser.parse_args()
 
     r = rospkg.RosPack()
@@ -76,16 +80,26 @@ if __name__ == '__main__':
     start_joints = config['start']['state']
     with open(args.pickle, 'rb') as f:
         data = pickle.load(f)
-    trajectory = data['states'][0][:args.end_idx:args.subsample]
+    trajectory = data['states'][0][:args.end_idx:args.subsample] # (t, 7)
     n_steps = len(trajectory)
     traj_pubs = [rospy.Publisher(f"/visualization/path_joints_{i}", DisplayRobotState, queue_size=1)
                  for i in range(n_steps)]
-    print("N STEPS", n_steps)
     
     rate.sleep()
     goal_pub.publish(get_display_robot_msg(goal_joints, 'indianred'))
     start_pub.publish(get_display_robot_msg(start_joints))
-    # trajectory_pub.publish(get_trajectory_msg(trajectory))
+    
+    if args.interpolate > 0:
+        dims = []
+        n_time, n_state = trajectory.shape
+        nominal_ts = np.linspace(0, 1, n_time)
+        interp_ts = np.linspace(0, 1, n_time * args.interpolate)
+        for i in range(n_state):
+            f = interpolate.interp1d(nominal_ts, trajectory[:,i])
+            dims.append(f(interp_ts))
+        trajectory = np.stack(dims, axis=-1)            
+            
+    trajectory_pub.publish(get_trajectory_msg(trajectory))
 
     
     # Display trajectory as color gradient

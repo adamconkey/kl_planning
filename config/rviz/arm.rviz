@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /TF1/Frames1
+        - /Trajectory1
       Splitter Ratio: 0.5835616588592529
     Tree Height: 726
   - Class: rviz/Selection
@@ -187,7 +188,25 @@ Visualization Manager:
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
+      Enabled: false
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: Start Joints
+      Robot Alpha: 1
+      Robot Description: robot_description
+      Robot State Topic: /visualization/start_joints
+      Show All Links: true
+      Show Highlights: true
+      Value: false
+      Visual Enabled: true
+    - Class: moveit_rviz_plugin/Trajectory
+      Color Enabled: false
       Enabled: true
+      Interrupt Display: true
       Links:
         All Links Enabled: true
         Expand Joint Details: false
@@ -261,24 +280,6 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-      Name: Start Joints
-      Robot Alpha: 1
-      Robot Description: robot_description
-      Robot State Topic: /visualization/start_joints
-      Show All Links: true
-      Show Highlights: true
-      Value: true
-      Visual Enabled: true
-    - Class: moveit_rviz_plugin/Trajectory
-      Color Enabled: false
-      Enabled: false
-      Interrupt Display: false
-      Links:
-        All Links Enabled: true
-        Expand Joint Details: false
-        Expand Link Details: false
-        Expand Tree: false
-        Link Tree Style: Links in Alphabetic Order
       Loop Animation: false
       Name: Trajectory
       Robot Alpha: 1
@@ -286,945 +287,208 @@ Visualization Manager:
       Robot Description: robot_description
       Show Robot Collision: false
       Show Robot Visual: true
-      Show Trail: true
-      State Display Time: 0.05 s
+      Show Trail: false
+      State Display Time: 0.01 s
       Trail Step Size: 30
       Trajectory Topic: /visualization/trajectory
-      Value: false
+      Value: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 0
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_0
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 1
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_1
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 2
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_2
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 3
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_3
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 4
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_4
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 5
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_5
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 6
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_6
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 7
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_7
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 8
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_8
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 9
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_9
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        end_effector_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_link8:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        panda_rightfinger:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        world:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Joints 10
       Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /visualization/path_joints_10
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
   Enabled: true
   Global Options:

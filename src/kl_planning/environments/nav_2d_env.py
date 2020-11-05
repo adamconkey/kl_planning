@@ -163,7 +163,7 @@ class Navigation2DEnvironment:
         for i, Y in enumerate(sigma_points):
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 1000.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 10000.0
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += in_collision.sum(dim=1)
         cost += collision_cost
@@ -210,7 +210,7 @@ class Navigation2DEnvironment:
                           size=0.01, sleep=0):
         if start_state is not None and samples is not None:
             samples = self.get_trajectory(start_state, samples)
-        vis_util.visualize_line_trajectory_samples(samples, costs=costs, colors=colors, size=size)
+        vis_util.visualize_trajectory_samples(samples, costs=costs, colors=colors, size=size)
         if sleep > 0:
             rospy.sleep(sleep)
 
