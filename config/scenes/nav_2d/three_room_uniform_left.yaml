@@ -301,7 +301,7 @@ indicators:
       - 0.36
       - 0.0
 agent:
-  type: cub
+  type: cube
   length: 0.2
   width: 0.2
   height: 0.05
@@ -344,5 +344,16 @@ goals:
       - 2.025
       - 2.025
       - 3.14
+real_dynamics_noise: 0.02
+belief_dynamics_noise: 0.02
+belief_observation_noise:
+  - 0.001
+cem_distribution: gaussian
 goal_distribution: uniform
 m_projection: True
+max_plan_steps: 50
+horizon: 10
+n_iters: 5
+n_candidates: 10000
+n_elite: 10
+n_mpc_runs: 1

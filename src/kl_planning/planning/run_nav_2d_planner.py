@@ -157,16 +157,25 @@ if __name__ == '__main__':
 
         if config['goal_distribution'] == 'gaussian':
             vis_util.visualize_gmm_goals([goal_dist.loc], [goal_dist.covariance_matrix])
-        
+        elif config['goal_distribution'] == 'gmm':
+            goal_mus = mus.squeeze()
+            goal_sigmas = torch.diag_embed(sigmas.squeeze(), dim1=-2, dim2=-1)
+            vis_util.visualize_gmm_goals(goal_mus, goal_sigmas)
+        elif config['goal_distribution'] == 'dirac_delta':
+            vis_util.visualize_gmm_goals([], []) # Will just show color background
+        elif config['goal_distribution'] == 'uniform':
+            vis_util.visualize_uniform_goal(lows, highs)
+        rospy.sleep(2)
+            
         for k in range(args.max_plan_steps):
             env.set_agent_location(true_state.cpu().numpy())
             log_states.append(true_state.cpu().numpy())
-            # Log KL divergence
-            if args.m_projection:
-                kl = kl_divergence(goal_dist, start_dist)
-            else:
-                kl = kl_divergence(start_dist, goal_dist)
-            log_kl_divergence.append(kl.item())
+            # # Log KL divergence
+            # if args.m_projection:
+            #     kl = kl_divergence(goal_dist, start_dist)
+            # else:
+            #     kl = kl_divergence(start_dist, goal_dist)
+            # log_kl_divergence.append(kl.item())
             
             plan_return = planner.plan_cem(env, start_dist, goal_dist, min_act, max_act, device,
                                            args.horizon, args.n_iters, args.n_candidates,
@@ -215,7 +224,7 @@ if __name__ == '__main__':
                         vis_util.visualize_gaussian_plan(mu, sigma, act, env, uniform_lows=lows,
                                                          uniform_highs=highs)
                     else:
-                        vis_util.visualize_gaussian_plan(mu, sigma, act, env, state_size)
+                        vis_util.visualize_gaussian_plan(mu, sigma, act, env)
                     rospy.sleep(1)
                         
             # Update current position for next planning step

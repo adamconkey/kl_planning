@@ -95,7 +95,7 @@ class Planner:
                         #     colors.append([1, 0.7, 0.13, 1])
                     env.visualize_samples(start_dist.loc, elite, colors=colors)
                 else:
-                    env.visualize_samples(start_dist.loc, elite, topk_costs)
+                    env.visualize_samples(start_dist.loc, elite)
                     # env.visualize_samples(start_dist.loc, act, size=0.005)
                 # rospy.sleep(1)
 

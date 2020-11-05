@@ -97,13 +97,13 @@ Visualization Manager:
       Quad Frame: kl_img
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /visualization/trajectory_samples
       Name: Trajectory Samples
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 186; 189; 182

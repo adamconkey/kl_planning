@@ -28,7 +28,8 @@ class TrajectorySampleVisualizer:
             self.rate.sleep()
 
     def _visualize_samples(self, req):
-        samples = np.array(req.samples).reshape(req.shape)
+        if req.samples:
+            samples = np.array(req.samples).reshape(req.shape)
         costs = list(req.costs)
         size = req.size
         if self.debug:
@@ -42,12 +43,12 @@ class TrajectorySampleVisualizer:
         elif req.colors:
             colors = [[c.r, c.g, c.b, c.a] for c in req.colors]
         else:
-            colors = [[0, 0, 0, 1] for _ in range(samples.shape[1])]
+            colors = [[0.44, 0.7, 0.96, 1] for _ in range(samples.shape[1])]
         self.samples_msg = MarkerArray([self._get_marker(samples[:,i,:], colors[i], i, size)
                                         for i in range(samples.shape[1])])
         return VisualizeTrajectorySamplesResponse(success=True)
 
-    def _get_marker(self, points, color, marker_id=0, size=0.03, frame_id='world', z=0.05):
+    def _get_marker(self, points, color, marker_id=0, size=0.01, frame_id='world', z=0.05):
         m = Marker()
         m.header.frame_id = frame_id
         m.id = marker_id

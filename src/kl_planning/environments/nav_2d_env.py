@@ -47,7 +47,7 @@ class Navigation2DEnvironment:
         """
         return self.goal_config['goal']['low'], self.goal_config['goal']['high']
         
-    def set_agent_location(self, pose, interpolate=True):
+    def set_agent_location(self, pose, interpolate=False):
         req = SetPoseRequest()
         req.interpolate = interpolate
         req.pose.position.x = pose[0]
@@ -151,7 +151,7 @@ class Navigation2DEnvironment:
             if self.m_projection:
                 kl_cost_t = lambda_ * kl_divergence(goal_dist, p_t)
                 if isinstance(goal_dist, Uniform):
-                    kl_cost_t = kl_cost_t.sum(dim=-1)
+                    kl_cost_t = kl_cost_t.sum(dim=-1) / 10000.0 # Uniform KL is huge
                 kl_cost += kl_cost_t
             else:
                 kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
@@ -163,7 +163,7 @@ class Navigation2DEnvironment:
         for i, Y in enumerate(sigma_points):
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 100.0
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 1000.0
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += in_collision.sum(dim=1)
         cost += collision_cost
@@ -206,8 +206,10 @@ class Navigation2DEnvironment:
 
         return samples[:,collision == 0]
         
-    def visualize_samples(self, start_state, samples, costs=None, colors=None, size=0.03, sleep=0):
-        samples = self.get_trajectory(start_state, samples)
+    def visualize_samples(self, start_state=None, samples=None, costs=None, colors=None,
+                          size=0.01, sleep=0):
+        if start_state is not None and samples is not None:
+            samples = self.get_trajectory(start_state, samples)
         vis_util.visualize_line_trajectory_samples(samples, costs=costs, colors=colors, size=size)
         if sleep > 0:
             rospy.sleep(sleep)

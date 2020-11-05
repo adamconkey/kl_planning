@@ -280,7 +280,7 @@ indicators:
       - 0
       - 0
       - 1
-  goal:
+  goal1:
     type: cylinder
     length: 0.05
     width: 0.05
@@ -288,6 +288,26 @@ indicators:
     position:
       - 1.5
       - 1.5
+      - 0.25
+    orientation:
+      - 0
+      - 0
+      - 0
+      - 1
+    parent_frame: world
+    color:
+      - 0
+      - 1
+      - 0
+      - 1
+  goal2:
+    type: cylinder
+    length: 0.05
+    width: 0.05
+    height: 0.5
+    position:
+      - 1.5
+      - -1.5
       - 0.25
     orientation:
       - 0
@@ -319,7 +339,7 @@ agent:
     - 0.23
     - 0.23
     - 0.23
-    - 1
+    - 1    
   max_phi: 0.7   # Angular turn rate
   min_v: 0.0     # Min linear velocity
   max_v: 0.5     # Max linear velocity
@@ -330,19 +350,38 @@ start:
     - -1.5  # x
     - 0    # y
     - 0    # theta
+  covariance:
+    - 0.001  # x
+    - 0.001  # y
+    - 0.001  # theta
 goals:
-  goal:
+  goal1:
     state:
-      - 1.5
-      - 1.5
-      - 0
+      - 1.5  # x
+      - 1.5  # y
+      - 0    # theta
+    covariance:
+      - 0.03
+      - 0.03
+      - 1.0
+    weight: 0.5
+  goal2:
+    state:
+      - 1.5   # x
+      - -1.5  # y
+      - 0     # theta
+    covariance:
+      - 0.03
+      - 0.03
+      - 1.0
+    weight: 0.5
 real_dynamics_noise: 0.02
 belief_dynamics_noise: 0.02
 belief_observation_noise:
   - 0.001
 cem_distribution: gaussian
-goal_distribution: dirac_delta
-m_projection: True
+goal_distribution: gmm
+m_projection: False
 max_plan_steps: 100
 horizon: 25
 n_iters: 5

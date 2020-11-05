@@ -16,7 +16,7 @@ from kl_planning.srv import VisualizeTrajectorySamples, VisualizeTrajectorySampl
 from kl_planning.util import math_util
 
 
-def visualize_line_trajectory_samples(samples, costs=None, colors=None, size=0.03):
+def visualize_trajectory_samples(samples=None, costs=None, colors=None, size=0.01):
     """
     Serializes trajectory samples and makes service request to visualize them.
     Samples are visualized as lines in rviz colored based on cost.
@@ -31,8 +31,9 @@ def visualize_line_trajectory_samples(samples, costs=None, colors=None, size=0.0
         costs = costs.cpu().numpy()
 
     vis_request = VisualizeTrajectorySamplesRequest()
-    vis_request.samples = samples.flatten().tolist()
-    vis_request.shape = list(samples.shape)
+    if samples is not None:
+        vis_request.samples = samples.flatten().tolist()
+        vis_request.shape = list(samples.shape)
     if costs is not None:
         vis_request.costs = costs.tolist()
     elif colors is not None:
@@ -114,6 +115,30 @@ def visualize_gmm_goals(mus, sigmas, save_path='/tmp/img.png'):
         Z = mvn.pdf(pos).reshape(500, 500)
         ax.contour(X, Y, Z, 10, cmap='Blues_r', alpha=0.5, linewidths=3)
 
+    ax.axis('off')
+    plt.tight_layout()
+    plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+    plt.close('all') # Free up memory
+    display_rviz_img(save_path)
+
+
+def visualize_uniform_goal(lows, highs, save_path='/tmp/img.png'):
+    x = np.linspace(-2, 2, 500)
+    y = np.linspace(-2, 2, 500)
+    X, Y = np.meshgrid(x, y)
+    pos = np.array([X.flatten(), Y.flatten()]).T
+
+    fig, ax = plt.subplots(1, 1)
+    fig.set_size_inches(10, 10)
+
+    # Get correct background color
+    ax.contourf(X, Y, np.zeros((500, 500)), cmap='magma_r', vmin=0, vmax=1)
+
+    # TODO need to actually get the shape from lows/highs
+    rect = plt.Rectangle([0.7,0.7], 50, 50, hatch="\\", fc=(0.4,0.8,0.4,0.4),
+                         ec=(0.07,0.3,0.07,0.8))
+    ax.add_artist(rect)
+    
     ax.axis('off')
     plt.tight_layout()
     plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
