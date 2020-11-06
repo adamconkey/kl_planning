@@ -5,55 +5,36 @@ from torch.distributions import MultivariateNormal, Normal, Uniform
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 
+from kl_planning.environments import Environment
 from kl_planning.util import file_util, math_util, vis_util
 from kl_planning.srv import SetPose, SetPoseRequest
 
 
-class Navigation2DEnvironment:
+class Navigation2DEnvironment(Environment):
+    """
+    2D environment for Dubins car navigation.
+    """
 
     def __init__(self, config, m_projection=False, belief_dynamics_noise=0.02,
                  device=torch.device('cuda')):
-        self.object_config = config['objects']
-        self.agent_config = config['agent']
-        self.indicator_config = config['indicators']
-        self.start_config = config['start']
-        self.goal_config = config['goals']
-        self.state_size = len(self.start_config['state'])
-
-        self.m_projection = m_projection
-        self.belief_dynamics_noise = belief_dynamics_noise
-        self.device = device
-        
+        super().__init__(config, m_projection, belief_dynamics_noise, device)        
         self._create_collision_checkers()
-
-    def get_start_state(self):
-        return self.start_config['state']
-
-    def get_start_covariance(self):
-        return self.start_config['covariance']
-
-    def get_goal_states(self):
-        return [v['state'] for v in self.goal_config.values()]
-
-    def get_goal_covariances(self):
-        return [v['covariance'] for v in self.goal_config.values()]
-
-    def get_goal_weights(self):
-        return [v['weight'] for v in self.goal_config.values()]
-
-    def get_goal_low_high(self):
-        """
-        This is for uniform distribution.
-        """
-        return self.goal_config['goal']['low'], self.goal_config['goal']['high']
         
-    def set_agent_location(self, pose, interpolate=False):
+    def set_agent_location(self, state, interpolate=False, z_pos=0.01):
+        """
+        Set the cars 2D planar pose in the scene. Makes request to visualization service.
+
+        Args:
+            state (list): Planar pose to set as current location (x,y,theta)
+            interpolate (bool): Interpolate between current and new state if True
+            z_pos (float): Fixed z-position (height) above environment x-y plane
+        """
         req = SetPoseRequest()
         req.interpolate = interpolate
-        req.pose.position.x = pose[0]
-        req.pose.position.y = pose[1]
-        req.pose.position.z = 0.01 # TODO hard-code
-        quat = R.from_euler('z', pose[2], degrees=False).as_quat()
+        req.pose.position.x = state[0]
+        req.pose.position.y = state[1]
+        req.pose.position.z = z_pos
+        quat = R.from_euler('z', state[2], degrees=False).as_quat()
         req.pose.orientation.x = quat[0]
         req.pose.orientation.y = quat[1]
         req.pose.orientation.z = quat[2]
@@ -64,14 +45,17 @@ class Navigation2DEnvironment:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call to set agent location failed: {e}")
         
-    def dynamics(self, start_pose, act, noise_gain=0.02):
+    def dynamics(self, state, act, noise_gain=0.02):
         """
-        start_pose (b, 3) x, y, theta
-        act (b, 2) 
+        Dubins car dynamics.
 
-        Trying parameterization from CEMP where action at each timestep is a turn
-        rate and duration for that action. A constant velocity is given such that
-        if turn rate is zero then it goes in straight line at a constant velocity.
+        Args:
+            state (Tensor): Start state of shape (n_batch, n_state)
+            act (Tensor): Action to apply of shape (n_batch, n_act)
+            noise_gain (float): Gain factor for additive Gaussian noise to dynamics
+        Returns:
+            next_state (Tensor): Next state after applying action on current state and feeding
+                                 through nonlinear stochastic dynamics of shape (n_batch, n_state)
         """
         # Adding small value so it doesn't divide by zero, this avoids having to do boolean
         # check on all values, will get washed out in noisy dynamics anyways
@@ -79,21 +63,28 @@ class Navigation2DEnvironment:
         v = act[:,1]
         dt = act[:,2]
         dt_u = dt * u
-        theta = start_pose[:,2]
+        theta = state[:,2]
 
-        next_pose = start_pose.detach().clone()
-        next_pose[:,0] += (v / u) * (torch.sin(theta + dt_u) - torch.sin(theta))
-        next_pose[:,1] += (v / u) * (torch.cos(theta) - torch.cos(theta + dt_u))
-        next_pose[:,2] += dt_u
+        next_state = state.detach().clone()
+        next_state[:,0] += (v / u) * (torch.sin(theta + dt_u) - torch.sin(theta))
+        next_state[:,1] += (v / u) * (torch.cos(theta) - torch.cos(theta + dt_u))
+        next_state[:,2] += dt_u
         
         # Add in noise on resulting state to model stochastic transition
-        next_pose += torch.randn_like(next_pose) * noise_gain
+        next_state += torch.randn_like(next_state) * noise_gain
         
-        return next_pose
+        return next_state
 
     def get_trajectory(self, start_state, actions, noise_gain=0.0):
         """
         Applies dynamics from start state with action sequence to get trajectories.
+
+        Args:
+            start_state (Tensor): Start to execute action trajectories from (n_state,)
+            actions (Tensor): Action trajectories to apply (n_time, n_trajs, n_act)
+            noise_gain (float): Gain factor on Gaussian dynamics noise
+        Returns:
+            trajs (Tensor): Computed trajectories from action sequences (n_time, n_trajs, n_state)
         """
         T = actions.size(0)
         n_trajs = actions.size(1)
@@ -105,14 +96,34 @@ class Navigation2DEnvironment:
             trajs[t+1] = self.dynamics(trajs[t], actions[t], noise_gain=noise_gain)
         return trajs
 
-    def in_collision(self, q):
-        in_collision = torch.zeros(q.size(0), dtype=torch.bool, device=self.device)
+    def in_collision(self, state):
+        """
+        Checks (in batch) if a state is in collision.
+
+        Args:
+            state (Tensor): States to check for collision (n_batch, n_state)
+        Returns:
+            in_collision (Tensor): Boolean tensor True if in collision False otherwise (n_batch,)
+        """
+        in_collision = torch.zeros(state.size(0), dtype=torch.bool, device=self.device)
         for obj_id, checker in self.collision_checkers.items():
-            obj_in_collision = checker(q)
+            obj_in_collision = checker(state)
             in_collision += obj_in_collision  # Boolean OR operation
         return in_collision
     
     def cost(self, act, start_dist, goal_dist, kl_divergence=None):
+        """
+        Cost function for ranking samples. Combined cost of KL divergence between start
+        state distribution and goal distribution and collision cost.
+
+        Args:
+            act (Tensor): Actions to be applied of shape (horizon, n_candidates, n_act)
+            start_dist (distribution): Start state distribution
+            goal_dist (distribution): Goal state distribution
+            kl_divergence (function): KL divergence function defined for state/goal distributions.
+        Returns:
+            cost (Tensor): Computed costs of shape (n_candidates,)
+        """
         if kl_divergence is None:
             kl_divergence = torch.distributions.kl.kl_divergence
 
@@ -124,6 +135,7 @@ class Navigation2DEnvironment:
         sigmas = [start_dist.covariance_matrix.repeat(n_candidates, 1, 1).to(self.device)]
         sigma_points = []
 
+        # Apply action sequences through unscented transform to do uncertainty propagation
         for t in range(len(act)):
             act_t = act[t].unsqueeze(1).repeat(1, n_sigma, 1)
             act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
@@ -177,6 +189,9 @@ class Navigation2DEnvironment:
         accumulate KL cost.
 
         Returns only samples that have no sigma points in collision.
+
+        Note: I tried this, didn't seem to work well. I think it takes too long to find
+              completely collision-free samples without a good action distribution initialization.
         """
         n_candidates = samples.size(1)
         n_state = start_dist.loc.size(-1)
@@ -206,8 +221,19 @@ class Navigation2DEnvironment:
 
         return samples[:,collision == 0]
         
-    def visualize_samples(self, start_state=None, samples=None, costs=None, colors=None,
-                          size=0.01, sleep=0):
+    def visualize_samples(self, start_state=None, samples=None, costs=None,
+                          colors=None, size=0.01, sleep=0):
+        """
+        Visualize trajectory samples in rviz.
+
+        Args:
+            start_state (Tensor): Start to execute action trajectories from (n_state,)
+            samples (Tensor or array): Trajectory samples of shape (n_time, n_samples, n_state)
+            costs (Tensor or array): Vector of costs associated with each sample
+            colors (list): List of colors (RGBA tuples) to color samples, of length n_samples
+            size (float): Width of lines to display in rviz
+            sleep (float): Time to sleep after displaying samples
+        """
         if start_state is not None and samples is not None:
             samples = self.get_trajectory(start_state, samples)
         vis_util.visualize_trajectory_samples(samples, costs=costs, colors=colors, size=size)
@@ -215,6 +241,15 @@ class Navigation2DEnvironment:
             rospy.sleep(sleep)
 
     def _create_collision_checkers(self, buffer_=0.1):
+        """
+        Creates collision checkers to determine if robot is in collision with environment.
+
+        Simple polygonal checks to test if robot in collision, right now only defined 
+        for cube obstacles and cube agent. Can add additional shapes as needed.
+
+        Args:
+            buffer_ (float): Buffer to pad collision determination from agent's body.
+        """
         self.collision_checkers = {}
         for obj_id, obj_data in self.object_config.items():
             if obj_data['type'] == 'cube':
@@ -232,5 +267,15 @@ class Navigation2DEnvironment:
                 print(f"Unknown object type for making collision object: {obj_data['type']}")    
 
     def _collision_checker_factory(self, x_l, x_h, y_l, y_h):
+        """
+        Factory for creating collision check functions for cubes. Function will compute boolean
+        test to determine if agent's body is in contact with (or penetrating) a cube obstacle.
+
+        Args:
+            x_l (float): Low x-dimension for boundary of obstacle
+            x_h (float): High x-dimension for boundary of obstacle
+            y_l (float): Low y-dimension for boundary of obstacle
+            y_h (float): High y-dimension for boundary of obstacle
+        """
         # Multiplication on bool tensors is AND operator
         return lambda x: (x[:,0] > x_l) * (x[:,0] < x_h) * (x[:,1] > y_l) * (x[:,1] < y_h)

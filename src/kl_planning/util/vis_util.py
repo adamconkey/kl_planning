@@ -22,7 +22,7 @@ def visualize_trajectory_samples(samples=None, costs=None, colors=None, size=0.0
     Samples are visualized as lines in rviz colored based on cost.
 
     Args:
-        samples (Tensor or array): Trajectory samples of shape (time, samples, state)
+        samples (Tensor or array): Trajectory samples of shape (n_time, n_samples, n_state)
         costs (Tensor or array): Vector of costs associated with each sample
     """
     if torch.is_tensor(samples):

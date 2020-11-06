@@ -8,20 +8,16 @@ from time import time
 
 from sensor_msgs.msg import JointState
 
+from kl_planning.environments import Environment
 from kl_planning.environments.resources import Panda, CollisionChecker
 from kl_planning.util import file_util, math_util, vis_util
 
 
-class ArmEnvironment:
+class ArmEnvironment(Environment):
 
     def __init__(self, config, m_projection=False, belief_dynamics_noise=0.02,
                  device=torch.device('cuda'), debug=False):
-        self.object_config = config['objects']
-        self.agent_config = config['agent']
-        self.start_config = config['start']
-        self.goal_config = config['goals']
-        self.indicator_config = config['indicators']
-        self.state_size = len(self.start_config['state'])
+        super().__init__(config, m_projection, belief_dynamics_noise, device)
 
         # TODO taking one explicitly, this won't work if you have multiple goals
         self.desired_position = torch.tensor(self.goal_config['goal']['position'])
@@ -29,10 +25,6 @@ class ArmEnvironment:
         self.desired_orientation = torch.tensor(self.goal_config['goal']['orientation'])
         self.desired_orientation = self.desired_orientation.unsqueeze(0).to(device)
         
-        self.m_projection = m_projection
-        self.belief_dynamics_noise = belief_dynamics_noise
-        self.device = device
-
         # Robot arm
         pybullet.connect(pybullet.GUI) if debug else pybullet.connect(pybullet.DIRECT)
         self.arm = Panda()
@@ -56,26 +48,25 @@ class ArmEnvironment:
         self.joint_state.header.stamp = rospy.Time.now()
         self.joint_state_pub.publish(self.joint_state)
 
-    def get_start_state(self):
-        return self.start_config['state']
-
-    def get_goal_states(self):
-        return [v['state'] for v in self.goal_config.values()]
-
-    def get_goal_covariances(self):
-        return [v['covariance'] for v in self.goal_config.values()]
-
-    def set_agent_location(self, q):
-        self.joint_state.position = q.tolist() + [0.04, 0.04] # Add gripper finger positions
+    def set_agent_location(self, state):
+        self.joint_state.position = state.tolist() + [0.04, 0.04] # Add gripper finger positions
         self.joint_state.header.stamp = rospy.Time.now()
         self.joint_state_pub.publish(self.joint_state)
     
     def dynamics(self, state, act, noise_gain=0.02):
         """
         Dynamics for arm are simply noisy versions of what is commanded.
+
+        Args:
+            state (Tensor): Start state of shape (n_batch, n_state)
+            act (Tensor): Action to apply of shape (n_batch, n_act)
+            noise_gain (float): Gain factor for additive Gaussian noise to dynamics
+        Returns:
+            next_state (Tensor): Next state after applying action on current state and feeding
+                                 through nonlinear stochastic dynamics of shape (n_batch, n_state)
         """
-        new_state = state + act + torch.randn_like(state) * noise_gain
-        return new_state
+        next_state = state + act + torch.randn_like(state) * noise_gain
+        return next_state
 
     def in_collision(self, q):
         collision = []
@@ -126,10 +117,7 @@ class ArmEnvironment:
                     kl_cost_t = kl_cost_t.sum(dim=-1)
                 kl_cost += kl_cost_t
             else:
-                kl_cost += lambda_ * kl_divergence(p_t, goal_dist)
-
-        # print("KL", kl_cost)
-        
+                kl_cost += lambda_ * kl_divergence(p_t, goal_dist)        
         cost += kl_cost
             
         # Compute collision costs based on sigma points
@@ -143,7 +131,7 @@ class ArmEnvironment:
             collision_cost += in_collision.sum(dim=1)
         cost += collision_cost * 10000.0
 
-        # TODO trying a cost on desired EE pose
+        # Cost on desired EE pose
         if self.desired_position is not None and self.desired_orientation is not None:
             ee_cost = 0
             for i, Y in enumerate(sigma_points):
@@ -152,10 +140,7 @@ class ArmEnvironment:
                 n_sigma = Y.size(1)
                 ps, qs = self.arm.fk(Y.view(B * n_sigma, -1))
                 ee_cost += lambda_ * self.ee_pose_error(ps, qs).view(B, n_sigma).sum(dim=1)
-
-            cost += ee_cost * 10.0  # TODO figure out weighting
-
-        # print("EE COST", ee_cost)
+            cost += ee_cost * 10.0
 
         return cost
 
@@ -171,9 +156,6 @@ class ArmEnvironment:
         # q_error = self.arm.orientation_error(q_desired, qs)
         error = p_error # + q_error
         return error
-
-    def visualize_samples(self, start_state, samples, costs=None):
-        pass
 
     def _create_collision_objects(self):
         objects = []
