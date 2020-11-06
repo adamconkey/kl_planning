@@ -240,4 +240,17 @@ goals:
       - 0.03
       - 0.03
       - 1.0
+real_dynamics_noise: 0.02
+belief_dynamics_noise: 0.02
+belief_observation_noise:
+  - 0.001
+cem_distribution: gaussian
+n_cem_gmm_components: 2
 goal_distribution: gaussian
+m_projection: False
+max_plan_steps: 100
+horizon: 15
+n_iters: 5
+n_candidates: 20000
+n_elite: 20
+n_mpc_runs: 1
