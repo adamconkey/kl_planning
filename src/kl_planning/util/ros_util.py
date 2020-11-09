@@ -1,3 +1,6 @@
+"""
+Utility functions for publishing and reading ROS messages.
+"""
 import cv2
 from cv_bridge import CvBridge
 
@@ -9,27 +12,42 @@ from geometry_msgs.msg import TransformStamped
 
 
 def rgb_to_msg(rgb_array):
+    """
+    Converts RGB array to an Image message using opencv.
+    """
     rgb_img = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
     rgb_msg = CvBridge().cv2_to_imgmsg(rgb_img)
     return rgb_msg
 
 
 def msg_to_rgb(img_msg):
+    """
+    Converts an Image message to a numpy array as an RGB image using opencv.
+    """
     rgb_img = cv2.cvtColor(msg_to_img(img_msg), cv2.COLOR_BGR2RGB)
     return rgb_img
 
 
 def img_to_msg(img_array):
+    """
+    Converts a numpy array to an Image message using opencv.
+    """
     img_msg = CvBridge().cv2_to_imgmsg(img_array)
     return img_msg
 
 
 def msg_to_img(img_msg):
+    """
+    Converts an Image message to a numpy array using opencv.
+    """
     img = CvBridge().imgmsg_to_cv2(img_msg)
     return img
 
 
 def get_marker_msg(obj_data, marker_id=0):
+    """
+    Creates Marker messages for object config data.
+    """
     marker = Marker()
     marker.id = marker_id
     if obj_data['type'] == 'cube':
@@ -77,6 +95,10 @@ def get_marker_array_msg(objects):
         
 
 def get_joint_state_msg(joint_pos):
+    """
+    Utility function that creates a Joint state message for the Panda 
+    robot with given joint positions to populate.
+    """
     joint_state_msg = JointState()
     # TODO joint names not yet in data, should do that
     joint_state_msg.name = [f'panda_joint{j}' for j in range(1, 8)]
@@ -86,6 +108,9 @@ def get_joint_state_msg(joint_pos):
 
 
 def get_tf_msg(tf, idx):
+    """
+    Creates a TF message for visualizing coordinate frames in rviz.
+    """
     tf_msg = TFMessage()
     for child_frame, data in tf.items():
         tf_stamped = TransformStamped()
@@ -103,17 +128,26 @@ def get_tf_msg(tf, idx):
 
 
 def publish_msg(msg, publisher):
+    """
+    Convenience function for publishing a message to a topic with current timestamp.
+    """
     msg.header.stamp = rospy.Time.now()
     publisher.publish(msg)
 
 
 def publish_tf_msg(msg, publisher):
+    """
+    Convenience function for publishing TF message with current timestamp.
+    """
     for tf_stamped in msg.transforms:
         tf_stamped.header.stamp = rospy.Time.now()
         publisher.publish(msg)
 
 
 def publish_marker_msg(msg, publisher):
+    """
+    Convenience function for publishing TF message with current timestamp.
+    """
     for marker in msg.markers:
         marker.header.stamp = rospy.Time.now()
         publisher.publish(msg)

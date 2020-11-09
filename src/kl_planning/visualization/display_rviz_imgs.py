@@ -6,6 +6,9 @@ from kl_planning.srv import DisplayImage, DisplayImageResponse
 
 
 class RvizImageDisplay:
+    """
+    Offers service for visualizing an image projected into rviz environment.
+    """
     def __init__(self):
         self.rate = rospy.Rate(1)
         self.img_msg = None

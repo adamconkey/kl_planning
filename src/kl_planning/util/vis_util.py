@@ -49,6 +49,9 @@ def visualize_trajectory_samples(samples=None, costs=None, colors=None, size=0.0
 
 
 def display_rviz_img(load_path):
+    """
+    Projects an image into rviz.
+    """
     img = cv2.imread(load_path, cv2.IMREAD_COLOR)
     img_msg = CvBridge().cv2_to_imgmsg(img, "bgr8")
     
@@ -60,6 +63,9 @@ def display_rviz_img(load_path):
         
 
 def get_color_sequence(n_colors, palette='hls', shuffle=False):
+    """
+    Returns a color sequence from the specified panel.
+    """
     colors = list(sns.color_palette(palette, n_colors))
     if shuffle:
         random.shuffle(colors)
@@ -68,6 +74,10 @@ def get_color_sequence(n_colors, palette='hls', shuffle=False):
 
 def plot_2d_gaussians(mus, sigmas, goal_mus=None, goal_sigmas=None, uniform_lows=None,
                       uniform_highs=None, save_path='/tmp/img.png'):
+    """
+    Plots contours of Gaussians over the environment. Saves to image so it can be
+    easily loaded and projected into rviz.
+    """
     x = np.linspace(-2, 2, 500)
     y = np.linspace(-2, 2, 500)
     X, Y = np.meshgrid(x, y)
@@ -99,6 +109,9 @@ def plot_2d_gaussians(mus, sigmas, goal_mus=None, goal_sigmas=None, uniform_lows
 
 
 def visualize_gmm_goals(mus, sigmas, save_path='/tmp/img.png'):
+    """
+    Visualizes GMM goals on projected image in rviz.
+    """
     x = np.linspace(-2, 2, 500)
     y = np.linspace(-2, 2, 500)
     X, Y = np.meshgrid(x, y)
@@ -123,6 +136,12 @@ def visualize_gmm_goals(mus, sigmas, save_path='/tmp/img.png'):
 
 
 def visualize_uniform_goal(lows, highs, save_path='/tmp/img.png'):
+    """
+    Visualizes uniform goal region projected as an image in rviz.
+
+    TODO this one is hacked to just take the region in the example, need to fix to
+    actually read from the highs/lows scaling apppropriately.
+    """
     x = np.linspace(-2, 2, 500)
     y = np.linspace(-2, 2, 500)
     X, Y = np.meshgrid(x, y)
@@ -149,6 +168,10 @@ def visualize_uniform_goal(lows, highs, save_path='/tmp/img.png'):
 def visualize_gmm_plan(start_mu, start_sigma, plan_dist, env, horizon,
                        act_size, goal_mus=None, goal_sigmas=None,
                        temp_img_filename='/tmp/kl_img.png', device=torch.device('cuda')):
+    """
+    Visualizes a GMM plan from CEM planner by projecting an image in rviz showing the
+    Gaussian components propagating uncertainty over the path.
+    """
     mus = [[start_mu] for _ in range(plan_dist.n_components)]
     sigmas = [[start_sigma] for _ in range(plan_dist.n_components)]
 
@@ -171,6 +194,10 @@ def visualize_gmm_plan(start_mu, start_sigma, plan_dist, env, horizon,
 def visualize_gaussian_plan(start_mu, start_sigma, act, env, goal_mu=None,
                             goal_sigma=None, uniform_lows=None, uniform_highs=None,
                             temp_img_filename='/tmp/kl_img.png'):
+    """
+    Visualizes the propagated state uncertainty by projecting an image in rviz showing the
+    Gaussian distributions spread across the path.
+    """
     mus = [start_mu]
     sigmas = [start_sigma]
     

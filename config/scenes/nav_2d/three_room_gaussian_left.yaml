@@ -340,7 +340,6 @@ goals:
       - 0.03
       - 0.03
       - 1.0
-
 real_dynamics_noise: 0.02
 belief_dynamics_noise: 0.02
 belief_observation_noise:

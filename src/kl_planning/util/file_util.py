@@ -1,3 +1,7 @@
+"""
+Utility functions for working with files/directories and loading/saving 
+data from various file formats (yaml, pickle).
+"""
 import os
 import sys
 import yaml
@@ -6,10 +10,6 @@ import shutil
 from glob import glob
 
 from kl_planning.util import ui_util
-
-
-# Utility functions for working with files/directories and loading/saving
-# data from various file formats (yaml, pickle).
 
 
 def list_dir(directory):

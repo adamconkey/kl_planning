@@ -9,9 +9,14 @@ from kl_planning.util import file_util
 
 
 if __name__ == '__main__':
+    """
+    Simple plot of logged KL divergence. Generated figure in the paper.
+    """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pickle', type=str, required=True)
-    parser.add_argument('--max_time', type=int, default=35)
+    parser.add_argument('--pickle', type=str, required=True,
+                        help="Absolute path to data pickle file")
+    parser.add_argument('--max_time', type=int, default=35,
+                        help="Max time index to include in the data plot")
     args = parser.parse_args()
 
     file_util.check_path_exists(args.pickle, "Pickle file")
@@ -22,7 +27,6 @@ if __name__ == '__main__':
     kl = data['kl_divergence'][0][:args.max_time + 1] # Adding 1 because it fills out span
 
     sns.set_style("darkgrid")
-
     
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(15, 3)

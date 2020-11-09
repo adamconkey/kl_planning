@@ -1,3 +1,7 @@
+"""
+Collection of utility functions for command-line interface.
+"""
+import sys
 from datetime import datetime
 
 
@@ -85,3 +89,20 @@ def query_yes_no(question, default="no"):
 
 def get_time():
     return datetime.now().strftime("%Y%m%d-%H%M%S")
+
+
+def assign_arg(key, args, config, choices=None):
+    """
+    Utility function that sets the value for a key in args based on config value. 
+    If already specified in args, that takes precedence. If a value for the key
+    is not provided in either args or config, will give an error.
+    """
+    if not getattr(args, key):
+        if key not in config:
+            print_error(f"\nMust specify value for '{key}' either in YAML config "
+                        f"or as a command line arg like:\n  --{key} VALUE\n")
+            sys.exit(1)
+        setattr(args, key, config[key])
+    if choices and getattr(args, key) not in choices:
+        print_error(f"\nInvalid value for {key}: {getattr(args, key)}\nChoices: {choices}\n")
+        sys.exit(1)

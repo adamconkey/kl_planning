@@ -3,6 +3,7 @@ import os
 import sys
 import rospy
 import rospkg
+rospack = rospkg.RosPack()
 import torch
 from torch.distributions.multivariate_normal import MultivariateNormal
 import numpy as np
@@ -13,38 +14,71 @@ from kl_planning.environments import ArmEnvironment
 from kl_planning.util import math_util, ui_util, file_util, vis_util
 
 
+# TODO for now limited support for other distribution types
+CEM_DISTRIBUTIONS = ['gaussian']
+GOAL_DISTRIBUTIONS = ['gaussian']
+
+
+def process_args(args, config):
+    ui_util.assign_arg('real_dynamics_noise', args, config)
+    ui_util.assign_arg('belief_dynamics_noise', args, config)
+    ui_util.assign_arg('belief_observation_noise', args, config)
+    ui_util.assign_arg('cem_distribution', args, config, CEM_DISTRIBUTIONS)
+    ui_util.assign_arg('goal_distribution', args, config, GOAL_DISTRIBUTIONS)
+    ui_util.assign_arg('max_plan_steps', args, config)
+    ui_util.assign_arg('horizon', args, config)
+    ui_util.assign_arg('n_iters', args, config)
+    ui_util.assign_arg('n_candidates', args, config)
+    ui_util.assign_arg('n_elite', args, config)
+    ui_util.assign_arg('n_mpc_runs', args, config)
+    if 'm_projection' in config:
+        args.m_projection = config['m_projection']
+
+
 if __name__ == '__main__':
+    """
+    Main script for running the arm environment plans.
+    """
     rospy.init_node('run_arm_planner')
     parser = argparse.ArgumentParser()
-    parser.add_argument('--real_dynamics_noise', type=float, default=0.02)
-    parser.add_argument('--belief_dynamics_noise', type=float, default=0.02)
-    parser.add_argument('--belief_observation_noise', type=float, nargs='+', default=[0.001])
-    parser.add_argument('--cem_distribution', type=str, default='gaussian', choices=['gaussian'])
-    parser.add_argument('--horizon', type=int, default=5)
-    parser.add_argument('--n_iters', type=int, default=3)
-    parser.add_argument('--n_candidates', type=int, default=40)
-    parser.add_argument('--n_elite', type=int, default=5)
-    parser.add_argument('--m_projection', action='store_true')
-    parser.add_argument('--force_dirac_identity_precision', action='store_true')
-    parser.add_argument('--save_path', type=str, default='')
-    parser.add_argument('--n_mpc_runs', type=int, default=1)
+    parser.add_argument('--real_dynamics_noise', type=float,
+                        help="Gaussian noise gain on actual robot dynamics")
+    parser.add_argument('--belief_dynamics_noise', type=float,
+                        help="Gaussian noise gain on agent's belief of dynamics")
+    parser.add_argument('--belief_observation_noise', type=float, nargs='+',
+                        help="Gaussian noise gain on agent's state estimate")
+    parser.add_argument('--cem_distribution', type=str, choices=CEM_DISTRIBUTIONS + [None],
+                        help="Distribution type used in generating CEM action trajectory samples")
+    parser.add_argument('--goal_distribution', type=str, choices=GOAL_DISTRIBUTIONS + [None],
+                        help="Goal distribution type")
+    parser.add_argument('--max_plan_steps', type=int, help="Max number of iterations to run planning")
+    parser.add_argument('--horizon', type=int, help="Planning horizon")
+    parser.add_argument('--n_iters', type=int, help="Number of iterations to run CEM")
+    parser.add_argument('--n_candidates', type=int, help="Number of candidates to generate in CEM")
+    parser.add_argument('--n_elite', type=int, help="Number of elite samples to fit in CEM")
+    parser.add_argument('--n_mpc_runs', type=int, help="Number of full MPC executions to perform")
+    parser.add_argument('--save_path', type=str,
+                        help="Absolute path to save pickle data to (must provide to log data)")
+    parser.add_argument('--m_projection', action='store_true',
+                        help="Use M-projection in KL divergence, otherwise I-projection")
+    parser.add_argument('--cpu', action='store_true', help="Use CPU instead of GPU")
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
     # Load config that stores all scene and distribution information
     scene = rospy.get_param("scene")
-    r = rospkg.RosPack()
-    path = r.get_path('kl_planning')
+    path = rospack.get_path('kl_planning')
     config_path = os.path.join(path, 'config', 'scenes', 'arm', f"{scene}.yaml")
     file_util.check_path_exists(config_path, "Scene configuration file")
     config = file_util.load_yaml(config_path)
 
-    m_projection = config['m_projection'] if 'm_projection' in config else args.m_projection
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Set args as defaults from config, and override with anything from CL
+    process_args(args, config)
+
+    device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
     planner = Planner()
-    env = ArmEnvironment(config, m_projection, args.belief_dynamics_noise, device, args.debug)
+    env = ArmEnvironment(config, args.m_projection, args.belief_dynamics_noise, device, args.debug)
     start_state = torch.tensor(env.get_start_state(), dtype=torch.float32, device=device)
-    state_size = start_state.size(-1)
     
     if len(args.belief_observation_noise) == 1:
         belief_observation_noise = torch.ones(env.state_size) * args.belief_observation_noise[0]
@@ -62,31 +96,6 @@ if __name__ == '__main__':
         goal_mu = torch.tensor(goal_states[0], dtype=torch.float32, device=device)
         goal_sigma = torch.diag(torch.tensor(goal_covs[0], dtype=torch.float32, device=device))
         goal_dist = torch.distributions.MultivariateNormal(goal_mu, goal_sigma)
-    elif config['goal_distribution'] == 'gmm':
-        from kl_planning.distributions import GaussianMixture
-        goal_states = env.get_goal_states()
-        goal_covs = env.get_goal_covariances()
-        goal_weights = env.get_goal_weights()
-        mus = torch.tensor(goal_states).unsqueeze(0)
-        sigmas = torch.tensor(goal_covs).unsqueeze(0)
-        n_components = mus.size(1)
-        n_features = mus.size(2)
-        goal_dist = GaussianMixture(n_components, n_features, mus, sigmas).to(device)
-        goal_dist.pi.data = torch.tensor(goal_weights).view(1, n_components, 1).to(device)
-        kl_divergence = math_util.kl_gmm_gmm
-    elif config['goal_distribution'] == 'uniform':
-        from torch.distributions.uniform import Uniform
-        lows, highs = env.get_goal_low_high()
-        goal_dist = Uniform(torch.tensor(lows).to(device), torch.tensor(highs).to(device))
-    elif config['goal_distribution'] == 'dirac_delta':
-        from kl_planning.distributions import DiracDelta
-        goal_state = torch.tensor(env.get_goal_states()[0])
-        goal_state = goal_state.unsqueeze(0).repeat(args.n_candidates, 1).to(device)
-        goal_dist = DiracDelta(goal_state, args.force_dirac_identity_precision)
-        kl_divergence = math_util.kl_dirac_mvn
-        # Creating one also for checking one state for logging
-        log_goal_dist = DiracDelta(goal_dist.state[0].unsqueeze(0),
-                                   args.force_dirac_identity_precision)
     else:
         ui_util.print_error(f"Unknown goal distribution type: {config['goal_distribution']}")
         sys.exit(0)

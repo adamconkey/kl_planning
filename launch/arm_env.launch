@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-  <arg name="scene"/>
+  <arg name="scene" default="pole_obstacle"/>
   <arg name="rviz_config" default="$(find kl_planning)/config/rviz/arm.rviz"/>
 
   <!-- ===================================================================================== -->

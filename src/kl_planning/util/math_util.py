@@ -1,3 +1,7 @@
+"""
+Utility functions for math operations (e.g. custom KL divergence functions, 
+sigma point algorithm, orientation representation utilities).
+"""
 import sys
 import numpy as np
 import torch
@@ -11,6 +15,24 @@ from kl_planning.util import ui_util
 
 
 def compute_sigma_points(mu, sigma, beta=2):
+    """
+    Computes sigma points for unscented transform. This algorithm is essentially
+    that presented in [1] which has fewer parameters to tune than the original.
+    The only difference here from [1] is we include also the mean so there are
+    2n+1 points instead of 2n.
+
+    Args:
+        mu (Tensor): Mean of current distribution (n_batch, n_state)
+        sigma (Tensor): Covariance of current distribution (n_batch, n_state, n_state)
+        beta (float): Parameter governing how spread out sigma points are from mean, 
+                      higher values spread points out more.
+    Returns:
+        sigma_points (Tensor): Computed sigma points (n_batch, 2*n_state+1, n_state)
+
+    [1] Manchester, Zachary, and Scott Kuindersma. "Derivative-free trajectory 
+        optimization with unscented dynamic programming." 2016 IEEE 55th 
+        Conference on Decision and Control (CDC). IEEE, 2016.
+    """
     B = mu.size(0)
     n = mu.size(-1)
     n_sigma = 2 * n + 1
@@ -25,8 +47,21 @@ def compute_sigma_points(mu, sigma, beta=2):
 
 def unscented_transform(mu, sigma, g, beta=2, device=torch.device('cuda')):
     """
-    The nonlinear function g is assumed to include any stochasticity being 
-    modeled, so no need to add the Q_t term in standard UKF.
+    Computes the unscented transform of the current Gaussian distribution 
+    passed through a nonlinear function. The nonlinear function g is assumed to 
+    include any stochasticity being modeled, so no need to add the Q_t term in 
+    standard UKF.
+
+    Args:
+        mu (Tensor): Mean of current distribution (n_batch, n_state)
+        sigma (Tensor): Covariance of current distribution (n_batch, n_state, n_state)
+        beta (float): Parameter governing how spread out sigma points are from mean, 
+                      higher values spread points out more.
+        device (device): Torch device to perform computations on
+    Returns:
+        mu_prime (Tensor): Mean of the transformed distribution (n_batch, n_state)
+        sigma_prime (Tensor): Covariance of the transformed distribution (n_batch, n_state, n_state)
+        S (Tensor): Sigma points of the transformed distribution (n_batch, 2*n_state+1, n_state)
     """
     B = mu.size(0)
     n_state = mu.size(-1)
@@ -138,10 +173,16 @@ def kl_dirac_mvn(dirac, mvn, device=torch.device('cuda')):
 
 
 def pos_from_homogeneous(T):
+    """
+    Extracts position elements from a homogeneous transformation matrix.
+    """
     return T[:3, 3]
 
 
 def rot_from_homogeneous(T):
+    """
+    Extraction rotation matrix from homogeneous transformation matrix.
+    """
     return T[:3, :3]
 
 
@@ -155,6 +196,13 @@ def quat_from_homogeneous(T):
 
 
 def pose_to_homogeneous(p, q):
+    """
+    Converts a postition-quaternion pose to a homogeneous transformation matrix.
+    
+    Args:
+        p (array): 3-D position (x, y, z)
+        q (qrray): 4-D quaternion (x, y, z, w)
+    """
     q = Quaternion(q[3], q[0], q[1], q[2]) # w, x, y, z
     T = q.transformation_matrix
     T[:3, 3] = p
@@ -163,7 +211,12 @@ def pose_to_homogeneous(p, q):
 
 def rot_from_quat(q):
     """
-    Assumes batched (B, 4) where quaternion is (x, y, z, w). Assumes unit quaternion.
+    Computes (in batch) rotation matrix from quaternion. 
+
+    Args:
+        q (Tensor): Quaternion (x, y, z, w) with shape (n_batch, 4). Assumes unit quaternion.
+    Returns:
+        R (Tensor): Computed rotation matrix (n_batch, 3, 3)
 
     https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Quaternion-derived_rotation_matrix
     """
@@ -183,6 +236,16 @@ def rot_from_quat(q):
 
 
 def interpolate_poses(start_pose, end_pose, n_points):
+    """
+    Interpolates between start and end position-quaternion poses.
+    
+    Args:
+        start_pose (Pose): ROS Pose message for start pose
+        end_pose (Pose): ROS Pose message for end pose
+        n_points (int): Number of points to interpolate between start and end
+    Returns:
+        interp_points (list): List of interpolated points, each a ROS Pose message
+    """
     # Interpolate position
     s = start_pose.position
     e = end_pose.position

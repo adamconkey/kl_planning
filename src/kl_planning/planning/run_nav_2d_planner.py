@@ -16,32 +16,20 @@ CEM_DISTRIBUTIONS = ['gaussian', 'gmm']
 GOAL_DISTRIBUTIONS = ['gaussian', 'gmm', 'dirac_delta', 'uniform']
 
 
-def assign_arg(key, args, config, choices=None):
-    if not getattr(args, key):
-        if key not in config:
-            ui_util.print_error(f"\nMust specify value for '{key}' either in YAML config "
-                                f"or as a command line arg like:\n  --{key} VALUE\n")
-            sys.exit(1)
-        setattr(args, key, config[key])
-    if choices and getattr(args, key) not in choices:
-        ui_util.print_error(f"\nInvalid value for {key}: {getattr(args, key)}\nChoices: {choices}\n")
-        sys.exit(1)
-
-        
 def process_args(args, config):
-    assign_arg('real_dynamics_noise', args, config)
-    assign_arg('belief_dynamics_noise', args, config)
-    assign_arg('belief_observation_noise', args, config)
-    assign_arg('cem_distribution', args, config, CEM_DISTRIBUTIONS)
-    assign_arg('goal_distribution', args, config, GOAL_DISTRIBUTIONS)
-    assign_arg('max_plan_steps', args, config)
-    assign_arg('horizon', args, config)
-    assign_arg('n_iters', args, config)
-    assign_arg('n_candidates', args, config)
-    assign_arg('n_elite', args, config)
-    assign_arg('n_mpc_runs', args, config)
+    ui_util.assign_arg('real_dynamics_noise', args, config)
+    ui_util.assign_arg('belief_dynamics_noise', args, config)
+    ui_util.assign_arg('belief_observation_noise', args, config)
+    ui_util.assign_arg('cem_distribution', args, config, CEM_DISTRIBUTIONS)
+    ui_util.assign_arg('goal_distribution', args, config, GOAL_DISTRIBUTIONS)
+    ui_util.assign_arg('max_plan_steps', args, config)
+    ui_util.assign_arg('horizon', args, config)
+    ui_util.assign_arg('n_iters', args, config)
+    ui_util.assign_arg('n_candidates', args, config)
+    ui_util.assign_arg('n_elite', args, config)
+    ui_util.assign_arg('n_mpc_runs', args, config)
     if args.cem_distribution == 'gmm':
-        assign_arg('n_cem_gmm_components', args, config)
+        ui_util.assign_arg('n_cem_gmm_components', args, config)
     if 'm_projection' in config:
         args.m_projection = config['m_projection']
     if args.goal_distribution == 'dirac_delta' and 'force_dirac_identity_precision' in config:
@@ -49,6 +37,9 @@ def process_args(args, config):
 
 
 if __name__ == '__main__':
+    """
+    Main script for running the 2D navigation environment plans.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--real_dynamics_noise', type=float,
                         help="Gaussian noise gain on actual robot dynamics")

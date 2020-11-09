@@ -62,7 +62,7 @@ class ArmEnvironment(Environment):
         Args:
             state (List, Tensor, array): 7-D joint positions in radians
         """
-        if isinstance(state, np.array):
+        if isinstance(state, np.ndarray):
             state = state.tolist()
         elif torch.is_tensor(state):
             state = state.cpu().numpy().tolist()
