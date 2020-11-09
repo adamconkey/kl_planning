@@ -35,3 +35,42 @@ Once that is setup you can do (assuming your workspace is named `catkin_ws`):
 You should be all set! Again I am hoping to simplify this soon to move to Ubuntu 20.04/ROS Noetic with native Python3, so hopefully the opencv build can be omitted. I will also provide Docker containers so you can avoid this setup entirely.
 
 ## Usage
+There are currently two environments offered, one for 2D navigation and one for planning with a 7-DOF arm.
+### 2D Navigation
+First launch the rviz environment for visualization. You will need to specify a scene configuration which are YAML configuration files that specify everything needed to run a planning session. All available configs are contained in `config/scenes/nav_2d`. The command to launch the environment is
+
+    roslaunch kl_planning nav_2d_env.launch scene:=SCENE_NAME
+    
+where SCENE_NAME should be replaced by one of the available scenes:
+
+| Scene                                |
+|--------------------------------------|
+| `one_obstacle`                       |
+| `three_room_dirac_left`              |
+| `three_room_gaussian_left`           |
+| `three_room_gmm_even-weight_gmm-cem` |
+| `three_room_gmm_even-weight_Iproj`   |
+| `three_room_gmm_even-weight_Mproj`   |
+| `three_room_gmm_right-higher-weight` |
+| `three_room_uniform_left`            |
+
+The scene name gets loaded to the ROS parameter server so that you can run the associated run script in `src/kl_planning/planning` with the default config values automatically:
+
+    python run_nav_2d_planner.py
+    
+You can also override some parameters that can make tuning the CEM parameters more easy, for example:
+
+    python run_nav_2d_planner.py --n_candidates 1000 --n_elite 50 --belief_dynamics_noise 0.05 --cpu
+    
+You can run this command to see all the command line args you can pass in:
+
+    python run_nav_2d_planner.py -h
+    
+### 7-DOF Arm
+A similar structure holds for the arm environment as the 2D navigation. Right now there is only one scene offered:
+
+    roslaunch kl_planning arm_env.launch scene:=pole_obstacle
+    
+There is an associated run script in `src/kl_planning/planning`:
+
+    python run_arm_planner.py -h
