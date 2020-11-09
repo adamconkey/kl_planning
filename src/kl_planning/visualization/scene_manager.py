@@ -13,8 +13,17 @@ from kl_planning.srv import SetPose, SetPoseResponse
 
 
 class SceneManager:
+    """
+    Scene manager for rendering the environment environment. Displays the agent,
+    obstacles, goal/start indicators, etc..
+    """
 
     def __init__(self, rate=500, n_interpolation_points=100):
+        """
+        Args:
+            rate (float): ROS rate to run at
+            n_interpolation_points (int): Number of points to interpolate with if being used
+        """
         self.rate = rospy.Rate(rate)
         self.n_interpolation_points = n_interpolation_points
         self.scene_msg = None
@@ -28,6 +37,12 @@ class SceneManager:
         rospy.Service("/visualization/set_agent_location", SetPose, self._update_agent_location)
 
     def create_scene(self, env):
+        """
+        Creates the visualizations for everything specified.
+
+        Args:
+            env (Environment): Environment object with configs specifying what's to be visualized.
+        """
         self.env = env
         self.scene_msg = ros_util.get_marker_array_msg(env.object_config)
         if env.indicator_config:
@@ -37,6 +52,9 @@ class SceneManager:
             self.agent_msg = ros_util.get_marker_array_msg({'agent': env.agent_config})
                 
     def run(self):
+        """
+        Main run function that enables visualization.
+        """
         rospy.loginfo("Visualizing scene")
         while not rospy.is_shutdown():
             if self.scene_msg:
@@ -51,6 +69,9 @@ class SceneManager:
         rospy.loginfo("Exiting")
 
     def _update_agent_location(self, req):
+        """
+        Service offered that updates the agent's location in the scene.
+        """
         if req.interpolate:
             poses = math_util.interpolate_poses(self.agent_msg.markers[0].pose, req.pose,
                                                 self.n_interpolation_points)
@@ -62,6 +83,9 @@ class SceneManager:
         return SetPoseResponse(success=True)
 
     def _add_goal_text_markers(self):
+        """
+        Visualizes text above goals in rviz.
+        """
         marker_id = 1234
         for goal_id, goal_data in self.env.goal_config.items():
             if 'weight' not in goal_data:

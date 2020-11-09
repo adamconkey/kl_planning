@@ -58,11 +58,16 @@ def get_color(color_id):
 if __name__ == '__main__':
     rospy.init_node('visualize_arm_execution')
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pickle', type=str, required=True)
-    parser.add_argument('--scene', type=str, required=True)
-    parser.add_argument('--end_idx', type=int, default=None)
-    parser.add_argument('--subsample', type=int, default=1)
-    parser.add_argument('--interpolate', type=int, default=0)
+    parser.add_argument('--pickle', type=str, required=True,
+                        help="Absolute path to pickle file with data")
+    parser.add_argument('--scene', type=str, required=True,
+                        help="Scene configuration name (without .yaml extension)")
+    parser.add_argument('--end_idx', type=int, default=None,
+                        help="Last index in data to visualize")
+    parser.add_argument('--subsample', type=int, default=1,
+                        help="Data subsampling rate")
+    parser.add_argument('--interpolate', type=int, default=0,
+                        help="Number of interpolation points to use between data points")
     args = parser.parse_args()
 
     r = rospkg.RosPack()

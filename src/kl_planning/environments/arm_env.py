@@ -14,6 +14,9 @@ from kl_planning.util import file_util, math_util, vis_util
 
 
 class ArmEnvironment(Environment):
+    """
+    Panda arm environment.
+    """
 
     def __init__(self, config, m_projection=False, belief_dynamics_noise=0.02,
                  device=torch.device('cuda'), debug=False):
@@ -49,7 +52,21 @@ class ArmEnvironment(Environment):
         self.joint_state_pub.publish(self.joint_state)
 
     def set_agent_location(self, state):
-        self.joint_state.position = state.tolist() + [0.04, 0.04] # Add gripper finger positions
+        """
+        Sets the arms joint configuration (positions in radians) in the scene. 
+        Publishes as joint state that gets rendered in rviz.
+
+        Note also sets gripper joint positions at a fixed value just so they're
+        also visualized.
+
+        Args:
+            state (List, Tensor, array): 7-D joint positions in radians
+        """
+        if isinstance(state, np.array):
+            state = state.tolist()
+        elif torch.is_tensor(state):
+            state = state.cpu().numpy().tolist()
+        self.joint_state.position = state + [0.04, 0.04] # Add gripper finger positions
         self.joint_state.header.stamp = rospy.Time.now()
         self.joint_state_pub.publish(self.joint_state)
     
@@ -68,17 +85,31 @@ class ArmEnvironment(Environment):
         next_state = state + act + torch.randn_like(state) * noise_gain
         return next_state
 
-    def in_collision(self, q):
+    def in_collision(self, state):
+        """
+        Determines if the arm is in collision with an obstacle in environment.
+        Uses PyBullet as the backend collision checker.
+
+        Args:
+            state (Tensor) States to check for collision (n_batch, n_state)
+        Returns:
+            in_collision (Tensor) Boolean tensor True if in collision False otherwise (n_batch,)
+        """
         collision = []
-        n_samples = q.size(0)
-        n_state = q.size(-1)
+        n_samples = state.size(0)
+        n_state = state.size(-1)
         for i in range(n_samples):
             for j in range(n_state):
-                pybullet.resetJointState(self.arm.robot_id, j, q[i, j])
+                pybullet.resetJointState(self.arm.robot_id, j, state[i, j])
             collision.append(self.collision_checker.in_contact())            
         return torch.tensor(collision, device=self.device)
 
     def cost(self, act, start_dist, goal_dist, kl_divergence):
+        """
+        Cost function for ranking samples. Combined cost of KL divergence between start
+        state distribution and goal distribution, collision cost, and distance to desired
+        end-effector pose.
+        """
         n_candidates = act.size(1)
         n_state = start_dist.loc.size(-1)
         n_sigma = 2 * n_state + 1
@@ -87,6 +118,7 @@ class ArmEnvironment(Environment):
         sigmas = [start_dist.covariance_matrix.repeat(n_candidates, 1, 1).to(self.device)]
         sigma_points = []
 
+        # Apply action sequences through unscented transform to do uncertainty propagation
         for t in range(len(act)):
             act_t = act[t].unsqueeze(1).repeat(1, n_sigma, 1)
             act_t = act_t.view(act_t.size(0) * act_t.size(1), -1)
@@ -126,10 +158,10 @@ class ArmEnvironment(Environment):
         for i, Y in enumerate(sigma_points):
             B = Y.size(0)
             n_sigma = Y.size(1)
-            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) # TODO parameterize
+            in_collision = self.in_collision(Y.view(B * n_sigma, -1)) * 10000.0
             in_collision = in_collision.view(B, n_sigma)
             collision_cost += in_collision.sum(dim=1)
-        cost += collision_cost * 10000.0
+        cost += collision_cost
 
         # Cost on desired EE pose
         if self.desired_position is not None and self.desired_orientation is not None:
@@ -139,25 +171,34 @@ class ArmEnvironment(Environment):
                 B = Y.size(0)
                 n_sigma = Y.size(1)
                 ps, qs = self.arm.fk(Y.view(B * n_sigma, -1))
-                ee_cost += lambda_ * self.ee_pose_error(ps, qs).view(B, n_sigma).sum(dim=1)
-            cost += ee_cost * 10.0
+                # TODO for now just doing position error (not orientation error)
+                ee_cost += lambda_ * self.ee_pose_error(ps).view(B, n_sigma).sum(dim=1) * 10.0
+            cost += ee_cost
 
         return cost
 
-    def ee_pose_error(self, ps, qs):
+    def ee_pose_error(self, ps, qs=None):
         """
-        ps (B, 3)
-        qs (B, 4)
+        Computes pose error in batch between specified and desired poses.
+
+        Args:
+            ps (Tensor): Positions to compute error for (B, 3)
+            qs (Tensor): Quaternion orientations to compute error for (B, 4)
+        Returns:
+            error (Tensor): Pose error between specified and desired poses (B,)
         """
         B = ps.size(0)
         p_desired = self.desired_position.repeat(B, 1)
         q_desired = self.desired_orientation.repeat(B, 1)
         p_error = self.arm.position_error(p_desired, ps)
-        # q_error = self.arm.orientation_error(q_desired, qs)
-        error = p_error # + q_error
+        q_error = self.arm.orientation_error(q_desired, qs) if qs is not None else 0
+        error = p_error + q_error
         return error
 
     def _create_collision_objects(self):
+        """
+        Registers collision objects with PyBullet. Objects are read from object configuration.
+        """
         objects = []
         for obj_id, obj_data in self.object_config.items():
             if obj_data['type'] == 'cylinder':

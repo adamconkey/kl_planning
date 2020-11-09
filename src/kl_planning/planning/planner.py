@@ -21,6 +21,31 @@ class Planner:
                  n_components=2, kl_divergence=None, act_dist_type='gaussian',
                  visualize=False, purge_bad_samples=False, **kwargs):
         """
+        Runs CEM optimization to generate a plan action sequence for minimizing costs
+        between a current state distribution and a goal distribution.
+        
+        Args:
+            env (Environment): Environment object that has cost function defined
+            start_dist (distribution): Start state distribution
+            goal_dist (distribution): Goal state distribution
+            min_act (Tensor): Minimum action values to clamp to
+            max_act (Tensor): Maximum action values to clamp to
+            device (device): Torch device to perform computations on
+            horizon (int): Planning horizon
+            n_iters (int): Number of CEM iterations to run
+            n_candidates (int): Number of candidate samples to evaluate
+            n_elite (int): Number of elite samples to fit for the next iteration
+            n_components (int): Number of GMM components in planner (only used if planner is GMM)
+            kl_divergence (func): KL divergence function to compute between distributions
+            act_dist_type (str): Type of planner distribution (gaussian or gmm)
+            visualize (bool): Samples are visualized if True
+            purge_bad_samples (bool): Removes bad samples (e.g. in collision) if True. Note this
+                                      was experimented with but proved to take too long.
+           
+        Returns:
+            plan_return: Returns mean (Tensor) if planner is gaussian, and the full action
+                         distribution object if gmm (stores component weights and parameters)
+
         TODO: Introducing a distribution abstraction here would really clean things 
               up, instead of doing these switches everywhere on the distribution type.
               Can then also return just the end distribution instead of these
@@ -41,9 +66,6 @@ class Planner:
             act_mu[:,-1] = max_act[-1] # Initialize prior time durations as max possible
             act_mu = act_mu.view(1, horizon * act_size).repeat(n_components, 1)
             act_sigma = torch.ones(n_components, horizon * act_size)
-            # act_mu = act_mu.view(1, 1, horizon * act_size).repeat(1, n_components, 1)
-            # act_sigma = torch.ones(1, n_components, horizon * act_size)
-            # act_dist = GaussianMixture(n_components, horizon * act_size, act_mu, act_sigma)
             act_dist = GaussianMixture(n_components, covariance_type='diag',
                                        init_params='kmeans', max_iter=10)
             act_dist.means_ = act_mu.numpy()
@@ -79,16 +101,11 @@ class Planner:
             elite = act[:, topk_indices]
 
             if visualize:
-                # means = torch.from_numpy(act_dist.means_).view(horizon, 2, -1)
-                # env.visualize_samples(start_dist.loc, means, size=0.07)
-
-                # rospy.sleep(1)
                 if act_dist_type == 'gmm':
                     colors = []
                     for label in labels[topk_indices.cpu().numpy()]:
                         # TODO need to fix this
-                        colors.append([0.44, 0.7, 0.96, 1])
-                        
+                        colors.append([0.44, 0.7, 0.96, 1])                        
                         # if label == 0:
                         #     colors.append([0.44, 0.7, 0.96, 1])
                         # else:
@@ -96,9 +113,6 @@ class Planner:
                     env.visualize_samples(start_dist.loc, elite, colors=colors)
                 else:
                     env.visualize_samples(start_dist.loc, elite)
-                    # env.visualize_samples(start_dist.loc, act, size=0.005)
-                # rospy.sleep(1)
-
                 
             # Update belief with new means and standard deviations
             if act_dist_type == 'gaussian':

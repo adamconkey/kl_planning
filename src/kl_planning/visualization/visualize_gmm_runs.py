@@ -12,10 +12,17 @@ from kl_planning.environments import Navigation2DEnvironment
 
 
 if __name__ == '__main__':
+    """
+    This script visualizes multiple MPC runs at once on the 2D navigation environment.
+    This created visualization for video and paper.
+    """
     rospy.init_node('visualize_gmm_runs')
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_file', type=str, required=True)
-    parser.add_argument('--static', action='store_true')
+    parser.add_argument('--data_file', type=str, required=True,
+                        help="Absolute path to data pickle file")
+    parser.add_argument('--static', action='store_true'j,
+                        help=("Visualizes all at once in static image if true, otherwise "
+                              "shows incrementally as a video"))
     args = parser.parse_args()
 
     file_util.check_path_exists(args.data_file, "Data file")
