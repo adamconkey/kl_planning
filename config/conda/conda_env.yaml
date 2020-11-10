@@ -3,8 +3,6 @@ channels:
   - conda-forge
   - pytorch
 dependencies:
-  - python=3.6  # Need < 3.7 because of boost building for opencv
-  - qt=5.9.5    # Version needed to build rviz_textured_quads
   - pyyaml
   - tqdm
   - h5py
@@ -14,14 +12,12 @@ dependencies:
   - gpustat
   - scikit-learn
   - seaborn
-  - pytorch=1.6.0
-  - torchvision=0.7.0
+  - pytorch=1.7.0
+  - torchvision=0.8.1
   - pip
   - pip:
-    - catkin_tools
-    - torchsummary
-    - empy         # Needed to build ROS msgs in catkin
+    - git+https://github.com/catkin/catkin_tools.git  # Needed for Python3 compatibility
+    - python3-empy # Needed to build ROS msgs in catkin
     - rospkg       # Needed to run ROS scripts
-    - dataclasses  # Needed for python3.6, will be included in python3.7
     - pyquaternion
     - pybullet
