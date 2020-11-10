@@ -39,7 +39,7 @@ The source/build procedure is as follows (order matters):
     catkin build
     source ~/catkin_ws/devel/setup.bash
     
-You should be all set! I may also provide a Docker container so you can avoid this setup entirely if that's desired.
+You should be all set! Note it does also work in Ubuntu 18.04 (and likely older versions also) but it's more of a pain, as you have to suffer through buidling OpenCV from source against your Python3 version, and I've had constant headaches maintaining that over time. If you need a different Ubuntu/ROS version, raise an issue and I can make a Dockerfile that shows the setup and could be used directly to create a Docker image.
 
 ## Usage
 There are currently two environments offered, one for 2D navigation and one for planning with a 7-DOF arm.
