@@ -1,6 +1,6 @@
 # Planning under Uncertainty to Goal Distributions
 
-This repository hosts code associated with our paper _Planning under Uncertainty to Goal Distributions_, currently under review. Link to arxiv paper coming soon.
+This repository hosts code associated with our paper [_Planning under Uncertainty to Goal Distributions_](https://arxiv.org/abs/2011.04782), currently under review.
 
 If you try to use this code and have troubles installing or using it, or have a question about the paper, please raise an issue or email me at [adam.conkey@gmail.com](adam.conkey@gmail.com) and I will get back to you.
 
