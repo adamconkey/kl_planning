@@ -1,8 +1,6 @@
 # Planning under Uncertainty to Goal Distributions
 
-This repository hosts code associated with our paper [_Planning under Uncertainty to Goal Distributions_](https://arxiv.org/abs/2011.04782) by [Adam Conkey](https://adamconkey.github.io/) and [Tucker Hermans](https://robot-learning.cs.utah.edu/thermans), currently under review.
-
-If you try to use this code and have troubles installing or using it, or have a question about the paper, please raise an issue or email me at [adam.conkey@gmail.com](adam.conkey@gmail.com) and I will get back to you.
+This repository hosts code associated with our paper Planning under Uncertainty to Goal Distributions, currently under review.
 
 ## Installation
 Currently supported:
